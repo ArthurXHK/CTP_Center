@@ -12,13 +12,15 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Account.h" />
-    <ClInclude Include="CallBack.h" />
     <ClInclude Include="DBLog.h" />
+    <ClInclude Include="toolkit.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Account.cpp" />
+    <ClCompile Include="AccountCallback.cpp" />
     <ClCompile Include="DBLog.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="toolkit.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{267A6860-B83F-41A8-ABCA-5ADB65F40023}</ProjectGuid>

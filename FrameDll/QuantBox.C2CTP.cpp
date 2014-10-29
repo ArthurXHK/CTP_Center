@@ -67,6 +67,7 @@ QUANTBOXC2CTP_API void __stdcall CTP_ReleaseMsgQueue(void* pMsgQueue)
 	if(pMsgQueue)
 	{
 		delete CTP_GetQueue(pMsgQueue);
+        pMsgQueue = NULL;
 	}
 }
 
@@ -407,6 +408,7 @@ QUANTBOXC2CTP_API void __stdcall MD_ReleaseMdApi(void* pMdUserApi)
 	if(pMdUserApi)
 	{
 		delete MD_GetApi(pMdUserApi);
+        pMdUserApi = NULL;
 	}
 }
 
@@ -547,6 +549,7 @@ QUANTBOXC2CTP_API void __stdcall TD_ReleaseTdApi(void* pTraderApi)
 	if(pTraderApi)
 	{
 		delete TD_GetApi(pTraderApi);
+        pTraderApi = NULL;
 	}
 }
 

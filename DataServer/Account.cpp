@@ -1,67 +1,137 @@
 #include "Account.h"
 
-Account::Account()
+void *Account::md;//行情端口
+void *Account::td; //用于获取交易合约的交易端口（非交易用）
+void *Account::md_msgQueue; //专门用于行情队列
+void *Account::td_msgQueue; //交易队列，交易账户集合用
+map<void *, int> Account::m_tdposition; //交易账户映射
+vector<void *> Account::v_tds; //交易账户集合
+DBLog *Account::dblog; //日志对象
+string Account::path; //con数据路径
+string Account::brokerid; //期商代码
+string Account::investor; //投资者代码
+string Account::password; //密码
+string Account::mdServer; //行情服务器地址
+string Account::tdServer; //交易服务器地址
+string Account::dbpath; //日志路径
+
+bool Account::ConnectMdServer(const char *file, const char *servername)
 {
+    bool isconnected = true;
+    //获取空间，绑定队列，注册回调
+    
     md = MD_CreateMdApi();
     td = TD_CreateTdApi();
-    msgQueue = CTP_CreateMsgQueue();
-    
-    CTP_RegAllCallback();
+    md_msgQueue = CTP_CreateMsgQueue();
+    td_msgQueue = CTP_CreateMsgQueue();
+    CTP_RegAllCallback(md_msgQueue);
+    CTP_RegAllCallback(td_msgQueue);
+    MD_RegMsgQueue2MdApi(md, md_msgQueue);
+    TD_RegMsgQueue2TdApi(td, md_msgQueue);
+    CTP_StartMsgQueue(md_msgQueue);
+    CTP_StartMsgQueue(td_msgQueue);
+    dblog = NULL;
 
-    MD_RegMsgQueue2MdApi(md, msgQueue);
-    TD_RegMsgQueue2TdApi(td, msgQueue);
-    CTP_StartMsgQueue(msgQueue);
-}
-Account::~Account()
-{
-    MD_ReleaseMdApi(md);
-    TD_ReleaseTdApi(td);
-    CTP_ReleaseMsgQueue(msgQueue);
-}
-
-bool Account::WaitForConnected()
-{
-    bool res = true;
+    //读取信息，处理连接
+    ReadInifile(file, servername);
+    AddLogPath(dbpath);
+    MD_Connect(md, path.c_str(), mdServer.c_str(), brokerid.c_str(), investor.c_str(), password.c_str());
+    TD_Connect(td, path.c_str(), tdServer.c_str(), brokerid.c_str(), investor.c_str(), password.c_str(), THOST_TERT_RESTART, "", "");
     if (TD_WaitForConnected(td))
     {
-        cout << "td connected" << endl; 
+        dblog->PrintLog("交易端已经登录(行情端账户)");
     }
-    else res = false;
     if (MD_WaitForConnected(md))
     {
-        cout << "md connected" << endl;
+        dblog->PrintLog("行情端已经登录(行情端账户)");
     }
-    else res = false;
+    v_tds.push_back(td);
+    return isconnected;
+}
+int Account::CreateTdAccount(const char *file, const char *servername)
+{
+    int ind;
+    if (0 == (ind = v_tds.size()))
+        dblog->PrintLog("行情端未登陆", "error");
+    else
+    {
+        ReadInifile(file, servername);
+        void *ttd = TD_CreateTdApi();
+        TD_RegMsgQueue2TdApi(ttd, td_msgQueue);
+        m_tdposition[ttd] = ind;
+        v_tds.push_back(ttd);
 
+        TD_Connect(ttd, path.c_str(), tdServer.c_str(), brokerid.c_str(), investor.c_str(), password.c_str(), THOST_TERT_RESTART, "", "");
+        bool ok = TD_WaitForConnected(ttd);
+        if (ok) dblog->PrintLog(string("交易账户") + char(ind + '0') + string("连接成功"));
+        else dblog->PrintLog(string("交易账户") + char(ind + '0') + string("连接失败"), "error");
+        
+    }
+    return ind;
+    
+}
+void Account::ReleaseAccount()
+{
+    TD_ReleaseTdApi(td);
+    MD_ReleaseMdApi(md);
+    int len = v_tds.size();
+    for (int i = 1; i < len; ++i)
+        TD_ReleaseTdApi(v_tds[i]);
+    CTP_ReleaseMsgQueue(td_msgQueue);
+    CTP_ReleaseMsgQueue(md_msgQueue);
+    delete dblog;
+    dblog = NULL;
+
+}
+
+string Account::GetPortMsg(void *port)
+{
+    string res;
+    if (port == md)
+        res = "行情端口(行情账户)";
+    else if (port == td)
+        res = "交易端口(行情账户)";
+    else
+    {
+        int ind;
+        if (ind = m_tdposition[port])
+        {
+            res = (string("交易账户[") + char(ind + '0')) + ']';
+        }
+        else
+        {
+            res = "没有这个交易账户";
+        }
+    }
     return res;
 }
-void Account::CTP_RegAllCallback()
+void Account::CTP_RegAllCallback(void *tmsgQueue)
 {
-    CTP_RegOnConnect(msgQueue, OnConnect);
-    CTP_RegOnDisconnect(msgQueue, OnDisconnect);
-    CTP_RegOnErrRtnOrderAction(msgQueue, OnErrRtnOrderAction);
-    CTP_RegOnErrRtnOrderInsert(msgQueue, OnErrRtnOrderInsert);
-    CTP_RegOnErrRtnQuoteAction(msgQueue, OnErrRtnQuoteAction);
-    CTP_RegOnErrRtnQuoteInsert(msgQueue, OnErrRtnQuoteInsert);
-    CTP_RegOnRspError(msgQueue, OnRspError);
-    CTP_RegOnRspOrderAction(msgQueue, OnRspOrderAction);
-    CTP_RegOnRspOrderInsert(msgQueue, OnRspOrderInsert);
-    CTP_RegOnRspQryDepthMarketData(msgQueue, OnRspQryDepthMarketData);
-    CTP_RegOnRspQryInstrument(msgQueue, OnRspQryInstrument);
-    CTP_RegOnRspQryInstrumentCommissionRate(msgQueue, OnRspQryInstrumentCommissionRate);
-    CTP_RegOnRspQryInstrumentMarginRate(msgQueue, OnRspQryInstrumentMarginRate);
-    CTP_RegOnRspQryInvestorPosition(msgQueue, OnRspQryInvestorPosition);
-    CTP_RegOnRspQryInvestorPositionDetail(msgQueue, OnRspQryInvestorPositionDetail);
-    CTP_RegOnRspQryOrder(msgQueue, OnRspQryOrder);
-    CTP_RegOnRspQryTrade(msgQueue, OnRspQryTrade);
-    CTP_RegOnRspQrySettlementInfo(msgQueue, OnRspQrySettlementInfo);
-    CTP_RegOnRspQryTradingAccount(msgQueue, OnRspQryTradingAccount);
-    CTP_RegOnRtnDepthMarketData(msgQueue, OnRtnDepthMarketData);
-    CTP_RegOnRtnForQuoteRsp(msgQueue, OnRtnForQuoteRsp);
-    CTP_RegOnRtnInstrumentStatus(msgQueue, OnRtnInstrumentStatus);
-    CTP_RegOnRtnOrder(msgQueue, OnRtnOrder);
-    CTP_RegOnRtnQuote(msgQueue, OnRtnQuote);
-    CTP_RegOnRtnTrade(msgQueue, OnRtnTrade);
+    CTP_RegOnConnect(tmsgQueue, OnConnect);
+    CTP_RegOnDisconnect(tmsgQueue, OnDisconnect);
+    CTP_RegOnErrRtnOrderAction(tmsgQueue, OnErrRtnOrderAction);
+    CTP_RegOnErrRtnOrderInsert(tmsgQueue, OnErrRtnOrderInsert);
+    CTP_RegOnErrRtnQuoteAction(tmsgQueue, OnErrRtnQuoteAction);
+    CTP_RegOnErrRtnQuoteInsert(tmsgQueue, OnErrRtnQuoteInsert);
+    CTP_RegOnRspError(tmsgQueue, OnRspError);
+    CTP_RegOnRspOrderAction(tmsgQueue, OnRspOrderAction);
+    CTP_RegOnRspOrderInsert(tmsgQueue, OnRspOrderInsert);
+    CTP_RegOnRspQryDepthMarketData(tmsgQueue, OnRspQryDepthMarketData);
+    CTP_RegOnRspQryInstrument(tmsgQueue, OnRspQryInstrument);
+    CTP_RegOnRspQryInstrumentCommissionRate(tmsgQueue, OnRspQryInstrumentCommissionRate);
+    CTP_RegOnRspQryInstrumentMarginRate(tmsgQueue, OnRspQryInstrumentMarginRate);
+    CTP_RegOnRspQryInvestorPosition(tmsgQueue, OnRspQryInvestorPosition);
+    CTP_RegOnRspQryInvestorPositionDetail(tmsgQueue, OnRspQryInvestorPositionDetail);
+    CTP_RegOnRspQryOrder(tmsgQueue, OnRspQryOrder);
+    CTP_RegOnRspQryTrade(tmsgQueue, OnRspQryTrade);
+    CTP_RegOnRspQrySettlementInfo(tmsgQueue, OnRspQrySettlementInfo);
+    CTP_RegOnRspQryTradingAccount(tmsgQueue, OnRspQryTradingAccount);
+    CTP_RegOnRtnDepthMarketData(tmsgQueue, OnRtnDepthMarketData);
+    CTP_RegOnRtnForQuoteRsp(tmsgQueue, OnRtnForQuoteRsp);
+    CTP_RegOnRtnInstrumentStatus(tmsgQueue, OnRtnInstrumentStatus);
+    CTP_RegOnRtnOrder(tmsgQueue, OnRtnOrder);
+    CTP_RegOnRtnQuote(tmsgQueue, OnRtnQuote);
+    CTP_RegOnRtnTrade(tmsgQueue, OnRtnTrade);
 
 
 }
@@ -70,7 +140,7 @@ void Account::CTP_RegAllCallback()
 void Account::ReadInifile(const char *file, const char *servername)
 {
     char tmp[105];
-    GetPrivateProfileStringA(servername, "path", "", tmp, sizeof(tmp), file);
+    GetPrivateProfileStringA(servername, "streampath", "", tmp, sizeof(tmp), file);
     path = tmp;
     GetPrivateProfileStringA(servername, "mdserver", "", tmp, sizeof(tmp), file);
     mdServer = tmp;
@@ -82,20 +152,16 @@ void Account::ReadInifile(const char *file, const char *servername)
     investor = tmp;
     GetPrivateProfileStringA(servername, "password", "", tmp, sizeof(tmp), file);
     password = tmp;
-
+    GetPrivateProfileStringA(servername, "dbpath", "", tmp, sizeof(tmp), file);
+    dbpath = tmp;
 }
 
-void Account::Connect()
+void Account::AddLogPath(const string &dbpath)
 {
-    MD_Connect(md, path.c_str(), mdServer.c_str(), brokerid.c_str(), investor.c_str(), password.c_str());
-    TD_Connect(td, path.c_str(), tdServer.c_str(), brokerid.c_str(), investor.c_str(), password.c_str(), THOST_TERT_RESTART, "", "");
+    if (NULL == dblog)
+        dblog = new DBLog(dbpath);
 }
 
-void Account::Disconnect()
-{
-    MD_Disconnect(md);
-    TD_Disconnect(td);
-}
 
 void Account::Subscribe(const char* instruments)
 {
@@ -180,3 +246,5 @@ void Account::QrySettlementInfo(const char* szTradingDay)
 {
     TD_ReqQrySettlementInfo(td, szTradingDay);
 }
+
+

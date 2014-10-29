@@ -18,10 +18,10 @@
     <ClInclude Include="Account.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="CallBack.h">
+    <ClInclude Include="DBLog.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="DBLog.h">
+    <ClInclude Include="toolkit.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
@@ -33,6 +33,12 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="DBLog.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="AccountCallback.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="toolkit.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
