@@ -76,6 +76,10 @@ string ConnectionStatusMsg(const ConnectionStatus &status)
     case E_conn_max:
         res = "连接达到最大值";
         break;
+    case E_unconnected:
+        res = "已断开连接";
+        break;
+        
     }
     return res;
 }

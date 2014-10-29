@@ -149,6 +149,7 @@ QUANTBOXC2CTP_API bool __stdcall MD_WaitForConnected(void *pMdUserApi);
 
 //jebin
 QUANTBOXC2CTP_API bool __stdcall TD_WaitForConnected(void *pTraderApi);
+QUANTBOXC2CTP_API bool __stdcall TD_WaitForInstrumentGeted(void *pTraderApi);
 QUANTBOXC2CTP_API void* __stdcall TD_CreateTdApi();
 //将消息队列注册到交易接口上
 QUANTBOXC2CTP_API void __stdcall TD_RegMsgQueue2TdApi(void* pTraderApi, void* pMsgQueue);

@@ -21,11 +21,17 @@ public:
         SYSTEMTIME st;
         GetLocalTime(&st);
         int len = filepath.size();
-        if (len > 0 && filepath[len - 1] == '\\')
-            cout << "ok" << endl;
+        if (len > 0 && filepath[len - 1] == '\\');
         else
             filepath += '\\';
-        filepath += to_string(st.wYear) + to_string(st.wMonth) + to_string(st.wDay) + string(".log");
+
+        //生成log文件名
+        filepath += to_string(st.wYear);
+        string tmp = to_string(st.wMonth);
+        filepath += tmp.size() == 1 ? string("0") + tmp : tmp;
+        tmp = to_string(st.wDay);
+        filepath += tmp.size() == 1 ? string("0") + tmp : tmp;
+        filepath += ".log";
         filestream.open(filepath, ios::app);
     };
     ~DBLog()

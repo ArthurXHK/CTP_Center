@@ -75,10 +75,11 @@ void Account::ReleaseAccount()
     TD_ReleaseTdApi(td);
     MD_ReleaseMdApi(md);
     int len = v_tds.size();
-    for (int i = 1; i < len; ++i)
+    for (int i = 0; i < len; ++i)
         TD_ReleaseTdApi(v_tds[i]);
     CTP_ReleaseMsgQueue(td_msgQueue);
     CTP_ReleaseMsgQueue(md_msgQueue);
+    m_tdposition.clear();
     delete dblog;
     dblog = NULL;
 
@@ -221,6 +222,10 @@ void Account::QryTradingAccount()
 void Account::QryInstrument(const char* szInstrumentId)
 {
     TD_ReqQryInstrument(td, szInstrumentId);
+    if (TD_WaitForInstrumentGeted(td))
+    {
+        dblog->PrintLog("获取今日交易合约成功");
+    }
 }
 
 //查手续费
