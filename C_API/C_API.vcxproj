@@ -10,6 +10,19 @@
       <Platform>Win32</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\include\DBLog.cpp" />
+    <ClCompile Include="..\include\toolkit.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\include\DBLog.h" />
+    <ClInclude Include="..\include\QuantBox.C2CTP.h" />
+    <ClInclude Include="..\include\ThostFtdcMdApi.h" />
+    <ClInclude Include="..\include\ThostFtdcTraderApi.h" />
+    <ClInclude Include="..\include\ThostFtdcUserApiDataType.h" />
+    <ClInclude Include="..\include\ThostFtdcUserApiStruct.h" />
+    <ClInclude Include="..\include\toolkit.h" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{DF255D1E-6FBF-4C35-9835-61A4C86ABF88}</ProjectGuid>
     <RootNamespace>C_API</RootNamespace>
@@ -69,14 +82,6 @@
       <AdditionalDependencies>thostmduserapi.lib;FrameDll.lib;thosttraderapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClInclude Include="Account.h" />
-    <ClInclude Include="CallBack.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="Account.cpp" />
-    <ClCompile Include="main.cpp" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
