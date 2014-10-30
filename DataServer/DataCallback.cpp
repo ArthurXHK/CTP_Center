@@ -5,14 +5,9 @@
 //深度行情回报
 void __stdcall DataServer::OnRtnDepthMarketData(void* pMdUserApi, CThostFtdcDepthMarketDataField *pDepthMarketData)
 {
-    static set<string> ok;
+
     static const double INF = 1e+100;
-    
-    if (ok.end() == ok.find(pDepthMarketData->InstrumentID))
-    {
-        ok.insert(pDepthMarketData->InstrumentID);
-        return;
-    }
+
     BSONObjBuilder b;
     b.appendDate("UpdateTime", Date_t(GetEpochTime(st, pDepthMarketData->UpdateTime, pDepthMarketData->UpdateMillisec)));
     b.append("InstrumentID", pDepthMarketData->InstrumentID);
@@ -45,6 +40,8 @@ void __stdcall DataServer::OnRspQryInstrument(void* pTraderApi, CThostFtdcInstru
     lock_guard<std::mutex> cl(cs_instrument);
     insts.insert(pInstrument->InstrumentID);
 
+    if (bIsLast)
+        SetEvent(h_instrumentGeted);
 
     auto_ptr<DBClientCursor> cursor =
         pCon->query(database+".instrument", QUERY("InstrumentID" << pInstrument->InstrumentID));

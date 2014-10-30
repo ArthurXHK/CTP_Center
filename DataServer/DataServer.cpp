@@ -16,6 +16,7 @@ string DataServer::database;
 string DataServer::mongoip;
 set<string> DataServer::insts;// 查询到的合约
 std::mutex DataServer::cs_instrument;
+mongo::HANDLE DataServer::h_instrumentGeted;
 SYSTEMTIME DataServer::st;
 
 bool DataServer::AllocMemory()
@@ -26,6 +27,7 @@ bool DataServer::AllocMemory()
     md_msgQueue = CTP_CreateMsgQueue();
     pCon = new mongo::DBClientConnection();
     dblog = new DBLog();
+    h_instrumentGeted = CreateEvent(NULL, TRUE, FALSE, NULL);
     if (NULL == md || NULL == td || NULL == md_msgQueue || NULL == pCon || NULL == dblog)
         return false;
     
@@ -185,9 +187,21 @@ void DataServer::Unsubscribe(const char* instruments)
 
 void DataServer::SubscribeAll()
 {
-    if (TD_WaitForInstrumentGeted(td))
+    if (DWORD tmp = WaitForSingleObject(h_instrumentGeted, 10000) )
     {
-        dblog->PrintLog("获取今日交易合约成功");
+        switch (tmp)
+        {
+        case WAIT_TIMEOUT:
+            dblog->PrintLog("获取合约超时", "error");
+            break;
+        case 0:
+            dblog->PrintLog("获取今日交易合约成功");
+            break;
+            
+        default:
+            dblog->PrintLog("获取合约错误", "error");
+            break;
+        }
     }
     set<string>::iterator iter;
     

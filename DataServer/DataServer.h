@@ -104,6 +104,7 @@ private:
     static string mongoip;                             //数据库ip地址
     static set<string> insts;                           // 查询到的合约
     static std::mutex cs_instrument;               
+    static mongo::HANDLE h_instrumentGeted;
     static SYSTEMTIME st;                             //登陆系统时间
 };
 
