@@ -1,14 +1,33 @@
 
 #include "DataServer.h"
 
-
-
 int main(int argc, char *argv[])
 {
-    
+    string inifile = "E:\\workplace\\CTP_Center\\server.ini";
+    string field = "realServer";
+    // 入口配置
+    if (argc > 1)
+    {
+        for (int i = 1; i < argc;)
+        {
+            if (strcmp(argv[i], "--inifile") == 0)
+            {
+                assert(argc >= i + 2);
+                inifile = argv[i + 1];
+                i += 2;
+            }
+            else if (strcmp(argv[i], "--field") == 0)
+            {
+                assert(argc >= i + 2);
+                field = argv[i + 1];
+                i += 2;
+            }
+        }
+    }
+
+    // 主逻辑
     DataServer& server = DataServer::GetAccountInstance();
-    //server.ini请修改未你的ini文件
-    while (!server.ConnectMdServer("E:\\workplace\\CTP_Center\\server.ini", "DataServer"))
+    while (!server.ConnectMdServer(inifile.c_str(), field.c_str()))
         server.Release();
     mongo::HANDLE h_heartbeat = server.StartHeartBeat();
 

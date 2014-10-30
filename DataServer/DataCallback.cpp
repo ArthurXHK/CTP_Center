@@ -8,7 +8,7 @@ void __stdcall DataServer::OnRtnDepthMarketData(void* pMdUserApi, CThostFtdcDept
     static set<string> ok;
     static const double INF = 1e+100;
     
-    if (ok.end() != ok.find(pDepthMarketData->InstrumentID))
+    if (ok.end() == ok.find(pDepthMarketData->InstrumentID))
     {
         ok.insert(pDepthMarketData->InstrumentID);
         return;
