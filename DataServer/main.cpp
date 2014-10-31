@@ -34,5 +34,6 @@ int main(int argc, char *argv[])
     server.QryInstrument("");
     server.SubscribeAll();
     WaitForSingleObject(h_heartbeat, INFINITE);
+    server.Release();
     return 0;
 }
