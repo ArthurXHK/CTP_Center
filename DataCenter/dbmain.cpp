@@ -11,7 +11,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, mxArray *prhs[])
         //连接数据库
         case 1:
         {
-            DCenter.connect("198.16.100.88", "MarketData");
+            if(1 == nrhs)
+                DCenter.connect();
+            else if(2 == nrhs)
+                DCenter.connect(mxArrayToString(prhs[1]));
+            else if(3 == nrhs)
+                DCenter.connect(mxArrayToString(prhs[1]), mxArrayToString(prhs[2]));
             break;
         }
         case 2:
@@ -21,6 +26,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, mxArray *prhs[])
         }
         case 3:
         {
+            plhs[0] = DCenter.GetTick(prhs[1], prhs[2], prhs[3]);
             break;
         }
         case 4:

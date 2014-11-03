@@ -26,8 +26,12 @@ public:
         static DataCenter datacenter;
         return datacenter;
     }
+    void PrintLog(string msg, string type = "normal");
+    bool CheckConnection();
     bool connect(const string ip = "localhost", const string db = "testMarketData");
     void disconnect();
+    mxArray *GetTick(mxArray *inst, mxArray *start, mxArray *end);
+    
 private:
     DataCenter()
     {
@@ -37,9 +41,9 @@ private:
     }
     ~DataCenter(){}
     DataCenter& operator=(DataCenter const&){}
-    void PrintLog(string msg, string type = "normal");
+    
     static mongo::DBClientConnection *pCon; //数据库连接口
-    static DBLog dblog;
+    static DBLog dblog;                             //日志
     static string serverIP;                          //服务器地址
     static string database;                        //当前操作数据库
     static string collection;                       //当前操作集合
