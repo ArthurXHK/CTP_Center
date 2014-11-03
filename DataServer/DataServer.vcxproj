@@ -11,16 +11,16 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\include\DBLog.h" />
+    <ClInclude Include="..\include\toolkit.h" />
     <ClInclude Include="DataServer.h" />
-    <ClInclude Include="DBLog.h" />
-    <ClInclude Include="toolkit.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\include\DBLog.cpp" />
+    <ClCompile Include="..\include\toolkit.cpp" />
     <ClCompile Include="DataServer.cpp" />
     <ClCompile Include="DataCallback.cpp" />
-    <ClCompile Include="DBLog.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="toolkit.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{267A6860-B83F-41A8-ABCA-5ADB65F40023}</ProjectGuid>

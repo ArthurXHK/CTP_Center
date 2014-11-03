@@ -2,16 +2,15 @@
 #define DATASERVER_H
 #pragma warning (disable: 4251)
 #pragma warning (disable: 4275)
-#define _WINSOCKAPI_
-#define NOMINMAX
+//先包含mongo库再包含windows.h避免编译问题，否则定义以下宏
+//#define _WINSOCKAPI_  
+//#define NOMINMAX
 
-#include <Windows.h>
-
+#include <mongo\client\dbclient.h>
+#include <mongo\bson\bson.h>
 #include "QuantBox.C2CTP.h"
 #include "DBLog.h"
 #include "toolkit.h"
-#include <mongo\client\dbclient.h>
-#include <mongo\bson\bson.h>
 
 #include <iostream>
 #include <string>
