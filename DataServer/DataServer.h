@@ -2,7 +2,7 @@
 #define DATASERVER_H
 #pragma warning (disable: 4251)
 #pragma warning (disable: 4275)
-//先包含mongo库再包含windows.h避免编译问题，否则定义以下宏
+//先包含mongo库再包含windows.h避免编译问题，否则定义以下宏，主要原因是winsock2.h必须在windows.h前面
 //#define _WINSOCKAPI_  
 //#define NOMINMAX
 
