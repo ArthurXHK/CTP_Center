@@ -147,6 +147,7 @@ private:
 
     static void *md;//行情端口
     static void *td; //用于获取交易合约的交易端口（非交易用）
+    static void *pmd, *ptd; //暂存行情端口地址
     static void *md_msgQueue; //专门用于行情队列
     static void *td_msgQueue; //交易队列，交易账户集合用
     static map<void *, int> m_tdposition; //交易账户映射

@@ -2,6 +2,7 @@
 
 void *Trader::md;//行情端口
 void *Trader::td; //用于获取交易合约的交易端口（非交易用）
+void *Trader::pmd, *Trader::ptd;
 void *Trader::md_msgQueue; //专门用于行情队列
 void *Trader::td_msgQueue; //交易队列，交易账户集合用
 map<void *, int> Trader::m_tdposition; //交易账户映射
@@ -35,7 +36,9 @@ bool Trader::ConnectMdServer(const char *file, const char *servername)
         return false;
     }
     md = MD_CreateMdApi();
+    pmd = md;
     td = TD_CreateTdApi();
+    ptd = td;
     md_msgQueue = CTP_CreateMsgQueue();
     td_msgQueue = CTP_CreateMsgQueue();
     CTP_RegAllCallback(md_msgQueue);
@@ -99,16 +102,14 @@ void Trader::ReleaseTrader()
 {
     
     int len = v_tds.size();
-    if (len > 1)
-        v_tds[0] = NULL;
     for (int i = 1; i < len; ++i)
     {
         TD_ReleaseTdApi(v_tds[i]);
         v_tds[i] = NULL;
     }
-    
-    MD_ReleaseMdApi(md);
     TD_ReleaseTdApi(td);
+    MD_ReleaseMdApi(md);
+    
     td = NULL;
     md = NULL;
     
@@ -138,9 +139,9 @@ string Trader::GetPortMsg(void *port)
     string res;
     if (NULL == port)
         return "端口为空";
-    if (port == md)
+    if (port == pmd)
         return  "行情端口(行情账户)";
-    else if (port == td)
+    else if (port == ptd)
         return  "交易端口(行情账户)";
     else
     {
