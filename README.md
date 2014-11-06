@@ -1,12 +1,10 @@
 ﻿#此项目为基于CTP的一系列项目
 在vs2013，32位matlab运行
 编译前请添加CTP_Center环境变量为当前项目位置如：CTP_Center: E:\workplace\CTP_Center
+matlab环境请将CTP_Center\lib加入路径
 
 ## FrameDll
 将原始CTP接口封装为DLL，源码为QuantBox的C接口，修改增加了一些其他机制。
-
-## C_API
-调用FrameDll产生的dll
 
 ## DataServer
 基于mongodb和CTP的自动收集处理数据服务器

@@ -1,9 +1,11 @@
-#ifndef ACCOUNT_H
-#define ACCOUNT_H
+#ifndef TRADER_H
+#define TRADER_H
 
 #include "QuantBox.C2CTP.h"
 #include "DBLog.h"
 #include "toolkit.h"
+#include "mex.h"
+#include "matrix.h"
 
 #include <iostream>
 #include <string>
@@ -13,24 +15,25 @@
 using namespace std;
 
 
-// 账户管理中心类
-class Account
+// 交易管理中心
+class Trader
 {
 public:
-    //获取唯一账户管理实例
-    static Account& GetAccountInstance()
+    //获取唯一实例
+    static Trader& GetInstance()
     {
-        static Account account;
-        return account;
+        static Trader trader;
+        return trader;
     }
+    static void PrintLog(const string &msg, const string type = "normal");
     //连接行情服务器
     bool ConnectMdServer(const char *file, const char *servername);
     //创建新交易账户，返回账户下标，-1为连接失败
     int CreateTdAccount(const char *file, const char *servername);
-    //销毁所有指针对象
-    void ReleaseAccount();
-    //添加log路径
-    void AddLogPath(const string &dbpath);
+    //销毁所有账户
+    void ReleaseTrader();
+    //销毁指定账户
+    void ReleaseTrader(int ind);
     //获取端口信息
     static string GetPortMsg(void *port);
     //订阅行情
@@ -39,7 +42,7 @@ public:
     void Unsubscribe(const char* instruments);
 
     //下单
-    int SendOrder(int OrderRef,
+    int SendOrder(int ind, int OrderRef,
         const char* szInstrument,
         const char* szExchange,
         TThostFtdcDirectionType Direction,
@@ -54,14 +57,14 @@ public:
         TThostFtdcVolumeConditionType VolumeCondition);
     
     // 撤单
-    void CancelOrder(CThostFtdcOrderField *pOrder);
+    bool CancelOrder(int ind, CThostFtdcOrderField *pOrder);
 
     //查持仓
-    void QryInvestorPosition(const char* szInstrumentId);
+    bool QryInvestorPosition(int ind, const char* szInstrumentId);
     //查持仓明细
-    void QryInvestorPositionDetail(const char* szInstrumentId);
+    bool QryInvestorPositionDetail(int ind, const char* szInstrumentId);
     //查资金账号
-    void QryTradingAccount();
+    bool QryTradingAccount(int ind);
     //查合约
     void QryInstrument(const char* szInstrumentId);
     //查手续费
@@ -71,7 +74,7 @@ public:
     //查深度行情
     void QryDepthMarketData(const char* szInstrumentId);
     //请求查询投资者结算结果
-    void QrySettlementInfo(const char* szTradingDay);
+    bool QrySettlementInfo(int ind, const char* szTradingDay);
     
 private:
     //读取配置文件
@@ -131,9 +134,16 @@ private:
 
 private:
     //隐藏默认构造
-    Account(){};
-    ~Account(){};
-    Account& operator=(Account const&);
+    Trader()
+    {
+        md = NULL;
+        td = NULL;
+        md_msgQueue = NULL;
+        td_msgQueue = NULL;
+        dblog.RegisterPath("..\\TraderCenter\\log");
+    }
+    ~Trader(){};
+    Trader& operator=(Trader const&);
 
     static void *md;//行情端口
     static void *td; //用于获取交易合约的交易端口（非交易用）
@@ -141,14 +151,14 @@ private:
     static void *td_msgQueue; //交易队列，交易账户集合用
     static map<void *, int> m_tdposition; //交易账户映射
     static vector<void *> v_tds; //交易账户集合
-    static DBLog *dblog; //日志对象
+    static DBLog dblog; //日志对象
     static string path; //con数据路径
     static string brokerid; //期商代码
     static string investor; //投资者代码
     static string password; //密码
     static string mdServer; //行情服务器地址
     static string tdServer; //交易服务器地址
-    static string dbpath; //日志路径
+    static string logpath; //日志路径
 };
 
 #endif

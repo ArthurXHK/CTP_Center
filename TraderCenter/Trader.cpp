@@ -1,25 +1,39 @@
-#include "Account.h"
+#include "Trader.h"
 
-void *Account::md;//行情端口
-void *Account::td; //用于获取交易合约的交易端口（非交易用）
-void *Account::md_msgQueue; //专门用于行情队列
-void *Account::td_msgQueue; //交易队列，交易账户集合用
-map<void *, int> Account::m_tdposition; //交易账户映射
-vector<void *> Account::v_tds; //交易账户集合
-DBLog *Account::dblog; //日志对象
-string Account::path; //con数据路径
-string Account::brokerid; //期商代码
-string Account::investor; //投资者代码
-string Account::password; //密码
-string Account::mdServer; //行情服务器地址
-string Account::tdServer; //交易服务器地址
-string Account::dbpath; //日志路径
+void *Trader::md;//行情端口
+void *Trader::td; //用于获取交易合约的交易端口（非交易用）
+void *Trader::md_msgQueue; //专门用于行情队列
+void *Trader::td_msgQueue; //交易队列，交易账户集合用
+map<void *, int> Trader::m_tdposition; //交易账户映射
+vector<void *> Trader::v_tds; //交易账户集合
+DBLog Trader::dblog; //日志对象
+string Trader::path; //con数据路径
+string Trader::brokerid; //期商代码
+string Trader::investor; //投资者代码
+string Trader::password; //密码
+string Trader::mdServer; //行情服务器地址
+string Trader::tdServer; //交易服务器地址
+string Trader::logpath; //日志路径
 
-bool Account::ConnectMdServer(const char *file, const char *servername)
+void Trader::PrintLog(const string &msg, const string type)
 {
-    bool isconnected = true;
+    if (type == string("error"))
+    {
+        mexWarnMsgTxt(msg.c_str());
+        dblog.PrintLog(msg, type);
+        return ;
+    }
+    mexPrintf((msg + '\n').c_str());
+    dblog.PrintLog(msg, type);
+}
+bool Trader::ConnectMdServer(const char *file, const char *servername)
+{
     //获取空间，绑定队列，注册回调
-    
+    if (md != NULL || td != NULL)
+    {
+        PrintLog("行情端已经连接", "error");
+        return false;
+    }
     md = MD_CreateMdApi();
     td = TD_CreateTdApi();
     md_msgQueue = CTP_CreateMsgQueue();
@@ -30,68 +44,100 @@ bool Account::ConnectMdServer(const char *file, const char *servername)
     TD_RegMsgQueue2TdApi(td, md_msgQueue);
     CTP_StartMsgQueue(md_msgQueue);
     CTP_StartMsgQueue(td_msgQueue);
-    dblog = NULL;
 
     //读取信息，处理连接
     ReadInifile(file, servername);
-    AddLogPath(dbpath);
+    
     MD_Connect(md, path.c_str(), mdServer.c_str(), brokerid.c_str(), investor.c_str(), password.c_str());
     TD_Connect(td, path.c_str(), tdServer.c_str(), brokerid.c_str(), investor.c_str(), password.c_str(), THOST_TERT_RESTART, "", "");
     if (TD_WaitForConnected(td))
     {
-        dblog->PrintLog("交易端已经登录(行情端账户)");
-    }
+        PrintLog("交易端已经登录(行情端账户)");
+        v_tds.push_back(td);
+    } else return false;
     if (MD_WaitForConnected(md))
     {
-        dblog->PrintLog("行情端已经登录(行情端账户)");
-    }
-    v_tds.push_back(td);
-    return isconnected;
+        PrintLog("行情端已经登录(行情端账户)");
+    }else return false;
+    return true;
 }
-int Account::CreateTdAccount(const char *file, const char *servername)
+int Trader::CreateTdAccount(const char *file, const char *servername)
 {
     int ind;
-    if (0 == (ind = v_tds.size()))
-        dblog->PrintLog("行情端未登陆", "error");
+    if (td == NULL || md == NULL)
+    {
+        PrintLog("未获取行情端", "error");
+        return -1;
+    }
     else
     {
+        ind = v_tds.size();
         ReadInifile(file, servername);
         void *ttd = TD_CreateTdApi();
         TD_RegMsgQueue2TdApi(ttd, td_msgQueue);
         m_tdposition[ttd] = ind;
-        v_tds.push_back(ttd);
 
         TD_Connect(ttd, path.c_str(), tdServer.c_str(), brokerid.c_str(), investor.c_str(), password.c_str(), THOST_TERT_RESTART, "", "");
         bool ok = TD_WaitForConnected(ttd);
-        if (ok) dblog->PrintLog(string("交易账户") + char(ind + '0') + string("连接成功"));
-        else dblog->PrintLog(string("交易账户") + char(ind + '0') + string("连接失败"), "error");
+        if (ok) 
+        {
+            v_tds.push_back(ttd);
+            PrintLog(string("交易账户") + char(ind + '0') + string("连接成功"));
+            mexPrintf("%d\n", v_tds.size());
+        }
+        else 
+        {
+            PrintLog(string("交易账户") + char(ind + '0') + string("连接失败"), "error");
+            TD_ReleaseTdApi(ttd);
+            return -2;
+        }
         
     }
     return ind;
     
 }
-void Account::ReleaseAccount()
+void Trader::ReleaseTrader()
 {
     TD_ReleaseTdApi(td);
     MD_ReleaseMdApi(md);
+    td = NULL;
+    md = NULL;
     int len = v_tds.size();
-    for (int i = 0; i < len; ++i)
+    if (len > 1)
+        v_tds[0] = NULL;
+    for (int i = 1; i < len; ++i)
+    {
         TD_ReleaseTdApi(v_tds[i]);
+        v_tds[i] = NULL;
+    }
+    v_tds.clear();
     CTP_ReleaseMsgQueue(td_msgQueue);
     CTP_ReleaseMsgQueue(md_msgQueue);
+    td_msgQueue = NULL;
+    md_msgQueue = NULL;
     m_tdposition.clear();
-    delete dblog;
-    dblog = NULL;
 
 }
 
-string Account::GetPortMsg(void *port)
+void Trader::ReleaseTrader(int ind)
+{
+    if(ind == 0 || ind >= v_tds.size())
+        PrintLog("没有这个交易端账户", "error");
+    else
+    {
+        TD_ReleaseTdApi(v_tds[ind]);
+        v_tds[ind] = NULL;
+    }
+}
+string Trader::GetPortMsg(void *port)
 {
     string res;
+    if (NULL == port)
+        return "端口为空";
     if (port == md)
-        res = "行情端口(行情账户)";
+        return  "行情端口(行情账户)";
     else if (port == td)
-        res = "交易端口(行情账户)";
+        return  "交易端口(行情账户)";
     else
     {
         int ind;
@@ -106,7 +152,7 @@ string Account::GetPortMsg(void *port)
     }
     return res;
 }
-void Account::CTP_RegAllCallback(void *tmsgQueue)
+void Trader::CTP_RegAllCallback(void *tmsgQueue)
 {
     CTP_RegOnConnect(tmsgQueue, OnConnect);
     CTP_RegOnDisconnect(tmsgQueue, OnDisconnect);
@@ -138,7 +184,7 @@ void Account::CTP_RegAllCallback(void *tmsgQueue)
 }
 
 
-void Account::ReadInifile(const char *file, const char *servername)
+void Trader::ReadInifile(const char *file, const char *servername)
 {
     char tmp[105];
     GetPrivateProfileStringA(servername, "streampath", "", tmp, sizeof(tmp), file);
@@ -153,29 +199,22 @@ void Account::ReadInifile(const char *file, const char *servername)
     investor = tmp;
     GetPrivateProfileStringA(servername, "password", "", tmp, sizeof(tmp), file);
     password = tmp;
-    GetPrivateProfileStringA(servername, "dbpath", "", tmp, sizeof(tmp), file);
-    dbpath = tmp;
+    GetPrivateProfileStringA(servername, "logpath", "", tmp, sizeof(tmp), file);
+    logpath = tmp;
 }
 
-void Account::AddLogPath(const string &dbpath)
-{
-    if (NULL == dblog)
-        dblog = new DBLog(dbpath);
-}
-
-
-void Account::Subscribe(const char* instruments)
+void Trader::Subscribe(const char* instruments)
 {
     MD_Subscribe(md, instruments, "");
 }
 
-void Account::Unsubscribe(const char* instruments)
+void Trader::Unsubscribe(const char* instruments)
 {
     MD_Unsubscribe(md, instruments, "");
 }
 
 
-int Account::SendOrder(int OrderRef,
+int Trader::SendOrder(int ind, int OrderRef,
     const char* szInstrument,
     const char* szExchange,
     TThostFtdcDirectionType Direction,
@@ -189,67 +228,101 @@ int Account::SendOrder(int OrderRef,
     double StopPrice,
     TThostFtdcVolumeConditionType VolumeCondition)
 {
-    return TD_SendOrder(td, OrderRef, szInstrument, szExchange, Direction, szCombOffsetFlag, szCombHedgeFlag,
+    if(ind < v_tds.size() && v_tds[ind] != NULL)
+    return TD_SendOrder(v_tds[ind], OrderRef, szInstrument, szExchange, Direction, szCombOffsetFlag, szCombHedgeFlag,
         VolumeTotalOriginal, LimitPrice, OrderPriceType, TimeCondition, ContingentCondition, StopPrice, VolumeCondition);
+    PrintLog(string(__FUNCTION__) + string("不存在账户: ") + to_string(ind));
+    return -1;
 }
 
 
-void Account::CancelOrder(CThostFtdcOrderField *pOrder)
+bool Trader::CancelOrder(int ind, CThostFtdcOrderField *pOrder)
 {
-    TD_CancelOrder(td, pOrder);
+    if(ind < v_tds.size() && v_tds[ind] != NULL)
+    {
+        TD_CancelOrder(v_tds[ind], pOrder);
+        return true;
+    }
+    PrintLog(string(__FUNCTION__) + string("不存在账户: ") + to_string(ind));
+    return false;
 }
 
 
 //查持仓
-void Account::QryInvestorPosition(const char* szInstrumentId)
+bool Trader::QryInvestorPosition(int ind, const char* szInstrumentId)
 {
-    TD_ReqQryInvestorPosition(td, szInstrumentId);
+    if(ind < v_tds.size() && v_tds[ind] != NULL)
+    {
+        TD_ReqQryInvestorPosition(v_tds[ind], szInstrumentId);
+        return true;
+    }
+    PrintLog(string(__FUNCTION__) + string("不存在账户: ") + to_string(ind));
+    return false;
 }
 
 //查持仓明细
-void Account::QryInvestorPositionDetail(const char* szInstrumentId)
+bool Trader::QryInvestorPositionDetail(int ind, const char* szInstrumentId)
 {
-    TD_ReqQryInvestorPositionDetail(td, szInstrumentId);
+    if(ind < v_tds.size() && v_tds[ind] != NULL)
+    {
+        TD_ReqQryInvestorPositionDetail(v_tds[ind], szInstrumentId);
+        return true;
+    }
+    PrintLog(string(__FUNCTION__) + string("不存在账户: ") + to_string(ind));
+    return false;
 }
 
 //查资金账号
-void Account::QryTradingAccount()
+bool Trader::QryTradingAccount(int ind)
 {
-    TD_ReqQryTradingAccount(td);
+    if(ind < v_tds.size() && v_tds[ind] != NULL)
+    {
+        TD_ReqQryTradingAccount(v_tds[ind]);
+        return true;
+    }
+    PrintLog(string(__FUNCTION__) + string("不存在账户: ") + to_string(ind));
+    return false;
 }
 
 //查合约
-void Account::QryInstrument(const char* szInstrumentId)
+void Trader::QryInstrument(const char* szInstrumentId)
 {
     TD_ReqQryInstrument(td, szInstrumentId);
     if (TD_WaitForInstrumentGeted(td))
     {
-        dblog->PrintLog("获取今日交易合约成功");
+        PrintLog("获取今日交易合约成功");
     }
+    else PrintLog("获取合约失败", "error");
 }
 
 //查手续费
-void Account::QryInstrumentCommissionRate(const char* szInstrumentId)
+void Trader::QryInstrumentCommissionRate(const char* szInstrumentId)
 {
     TD_ReqQryInstrumentCommissionRate(td, szInstrumentId);
 }
 
 //查保证金
-void Account::QryInstrumentMarginRate(const char* szInstrumentId, TThostFtdcHedgeFlagType HedgeFlag)
+void Trader::QryInstrumentMarginRate(const char* szInstrumentId, TThostFtdcHedgeFlagType HedgeFlag)
 {
     TD_ReqQryInstrumentMarginRate(td, szInstrumentId, HedgeFlag);
 }
 
 //查深度行情
-void Account::QryDepthMarketData(const char* szInstrumentId)
+void Trader::QryDepthMarketData(const char* szInstrumentId)
 {
     TD_ReqQryDepthMarketData(td, szInstrumentId);
 }
 
 //请求查询投资者结算结果
-void Account::QrySettlementInfo(const char* szTradingDay)
+bool Trader::QrySettlementInfo(int ind, const char* szTradingDay)
 {
-    TD_ReqQrySettlementInfo(td, szTradingDay);
+    if(ind < v_tds.size() && v_tds[ind] != NULL)
+    {
+        TD_ReqQrySettlementInfo(td, szTradingDay);
+        return true;
+    }
+    PrintLog(string(__FUNCTION__) + string("不存在账户: ") + to_string(ind));
+    return false;
 }
 
 
