@@ -54,3 +54,4 @@ server.ini
 *.sdf
 *.opensdf
 include/boost/*
+*test.m

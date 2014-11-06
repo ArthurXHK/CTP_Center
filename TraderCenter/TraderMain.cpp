@@ -30,6 +30,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, mxArray *prhs[])
         }
         case 4:
         {
+            
             break;
         }
         default:

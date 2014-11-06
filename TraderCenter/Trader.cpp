@@ -82,12 +82,11 @@ int Trader::CreateTdAccount(const char *file, const char *servername)
         if (ok) 
         {
             v_tds.push_back(ttd);
-            PrintLog(string("交易账户") + char(ind + '0') + string("连接成功"));
-            mexPrintf("%d\n", v_tds.size());
+            PrintLog(string("交易账户[") + to_string(ind) + string("]连接成功"));
         }
         else 
         {
-            PrintLog(string("交易账户") + char(ind + '0') + string("连接失败"), "error");
+            PrintLog(string("交易账户[") + to_string(ind) + string("]连接失败"), "error");
             TD_ReleaseTdApi(ttd);
             return -2;
         }
@@ -98,10 +97,7 @@ int Trader::CreateTdAccount(const char *file, const char *servername)
 }
 void Trader::ReleaseTrader()
 {
-    TD_ReleaseTdApi(td);
-    MD_ReleaseMdApi(md);
-    td = NULL;
-    md = NULL;
+    
     int len = v_tds.size();
     if (len > 1)
         v_tds[0] = NULL;
@@ -110,12 +106,20 @@ void Trader::ReleaseTrader()
         TD_ReleaseTdApi(v_tds[i]);
         v_tds[i] = NULL;
     }
+    
+    MD_ReleaseMdApi(md);
+    TD_ReleaseTdApi(td);
+    td = NULL;
+    md = NULL;
+    
     v_tds.clear();
     CTP_ReleaseMsgQueue(td_msgQueue);
     CTP_ReleaseMsgQueue(md_msgQueue);
     td_msgQueue = NULL;
     md_msgQueue = NULL;
     m_tdposition.clear();
+    
+    
 
 }
 
@@ -143,7 +147,7 @@ string Trader::GetPortMsg(void *port)
         int ind;
         if (ind = m_tdposition[port])
         {
-            res = (string("交易账户[") + char(ind + '0')) + ']';
+            res = string("交易账户[") + to_string(ind) + ']';
         }
         else
         {

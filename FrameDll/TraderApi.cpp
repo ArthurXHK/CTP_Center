@@ -32,8 +32,8 @@ CTraderApi::~CTraderApi(void)
 //jebin: 触发已经连接
 void CTraderApi::SetConnected()
 {
-    SetEvent(h_connected);
     isconnected = true;
+    SetEvent(h_connected);
 }
 
 bool CTraderApi::WaitForConnected()
