@@ -16,9 +16,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
 #include "ThostFtdcUserApiStruct.h"
-
 	//用于分隔输入的合列表，与前置机地址列表，所以不能出现“:”一类的
 #define _QUANTBOXC2CTP_SEPS_ ",;"
 
@@ -150,6 +148,9 @@ QUANTBOXC2CTP_API bool __stdcall MD_WaitForConnected(void *pMdUserApi);
 //jebin
 QUANTBOXC2CTP_API bool __stdcall TD_WaitForConnected(void *pTraderApi);
 QUANTBOXC2CTP_API bool __stdcall TD_WaitForInstrumentGeted(void *pTraderApi);
+QUANTBOXC2CTP_API bool __stdcall TD_GetOrder(void* pTraderApi, const char *OrderRef, CThostFtdcOrderField *order);
+QUANTBOXC2CTP_API int __stdcall TD_GetSessionID(void* pTraderApi);
+
 QUANTBOXC2CTP_API void* __stdcall TD_CreateTdApi();
 //将消息队列注册到交易接口上
 QUANTBOXC2CTP_API void __stdcall TD_RegMsgQueue2TdApi(void* pTraderApi, void* pMsgQueue);
@@ -181,6 +182,8 @@ QUANTBOXC2CTP_API int __stdcall TD_SendOrder(
 	TThostFtdcContingentConditionType ContingentCondition,
 	double StopPrice,
 	TThostFtdcVolumeConditionType VolumeCondition);
+
+
 
 //撤单
 QUANTBOXC2CTP_API void __stdcall TD_CancelOrder(void* pTraderApi, CThostFtdcOrderField *pOrder);

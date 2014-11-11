@@ -9,6 +9,7 @@
 #include <string>
 #include <mutex>
 #include <atomic>
+#include <vector>
 
 using namespace std;
 
@@ -72,6 +73,10 @@ public:
     void SetInstrumentGeted();
     bool WaitForConnected();
     bool WaitForInstrumentGeted();
+
+    //jebin: 获取当前连接报单
+    bool GetOrder(const string &OrderRef, CThostFtdcOrderField &order);
+    int GetSessionID();
 
 	void RegisterMsgQueue(CCTPMsgQueue* pMsgQueue);
 
@@ -243,6 +248,9 @@ private:
 
 	mutex						m_csMap;
 	map<int,SRequest*>			m_reqMap;				//已发送请求池
-
+    
+    mutex                       m_csOrders;                     
+    map<string, CThostFtdcOrderField> m_orders;//记录当前连接处理的报单
+    
 };
 

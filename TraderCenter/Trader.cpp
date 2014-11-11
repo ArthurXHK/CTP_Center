@@ -15,16 +15,10 @@ string Trader::password; //密码
 string Trader::mdServer; //行情服务器地址
 string Trader::tdServer; //交易服务器地址
 string Trader::logpath; //日志路径
+mutex Trader::csLog;
 
-void Trader::PrintLog(const string &msg, const string type)
+void Trader::PrintLog(string msg, string type)
 {
-    if (type == string("error"))
-    {
-        mexWarnMsgTxt(msg.c_str());
-        dblog.PrintLog(msg, type);
-        return ;
-    }
-    mexPrintf((msg + '\n').c_str());
     dblog.PrintLog(msg, type);
 }
 bool Trader::ConnectMdServer(const char *file, const char *servername)
@@ -47,7 +41,7 @@ bool Trader::ConnectMdServer(const char *file, const char *servername)
     TD_RegMsgQueue2TdApi(td, md_msgQueue);
     CTP_StartMsgQueue(md_msgQueue);
     CTP_StartMsgQueue(td_msgQueue);
-
+    
     //读取信息，处理连接
     ReadInifile(file, servername);
     
@@ -79,15 +73,16 @@ int Trader::CreateTdAccount(const char *file, const char *servername)
         void *ttd = TD_CreateTdApi();
         TD_RegMsgQueue2TdApi(ttd, td_msgQueue);
         m_tdposition[ttd] = ind;
-
+        
         TD_Connect(ttd, path.c_str(), tdServer.c_str(), brokerid.c_str(), investor.c_str(), password.c_str(), THOST_TERT_RESTART, "", "");
         bool ok = TD_WaitForConnected(ttd);
-        if (ok) 
+        if (ok)
         {
             v_tds.push_back(ttd);
+            mexPrintf("成功获取地址%x\n", ttd);
             PrintLog(string("交易账户[") + to_string(ind) + string("]连接成功"));
         }
-        else 
+        else
         {
             PrintLog(string("交易账户[") + to_string(ind) + string("]连接失败"), "error");
             TD_ReleaseTdApi(ttd);
@@ -119,9 +114,6 @@ void Trader::ReleaseTrader()
     td_msgQueue = NULL;
     md_msgQueue = NULL;
     m_tdposition.clear();
-    
-    
-
 }
 
 void Trader::ReleaseTrader(int ind)
@@ -136,6 +128,7 @@ void Trader::ReleaseTrader(int ind)
 }
 string Trader::GetPortMsg(void *port)
 {
+    
     string res;
     if (NULL == port)
         return "端口为空";
@@ -184,8 +177,8 @@ void Trader::CTP_RegAllCallback(void *tmsgQueue)
     CTP_RegOnRtnOrder(tmsgQueue, OnRtnOrder);
     CTP_RegOnRtnQuote(tmsgQueue, OnRtnQuote);
     CTP_RegOnRtnTrade(tmsgQueue, OnRtnTrade);
-
-
+    
+    
 }
 
 
@@ -219,24 +212,19 @@ void Trader::Unsubscribe(const char* instruments)
 }
 
 
-int Trader::SendOrder(int ind, int OrderRef,
-    const char* szInstrument,
-    const char* szExchange,
-    TThostFtdcDirectionType Direction,
-    const char* szCombOffsetFlag,
-    const char* szCombHedgeFlag,
-    TThostFtdcVolumeType VolumeTotalOriginal,
-    double LimitPrice,
-    TThostFtdcOrderPriceTypeType OrderPriceType,
-    TThostFtdcTimeConditionType TimeCondition,
-    TThostFtdcContingentConditionType ContingentCondition,
-    double StopPrice,
-    TThostFtdcVolumeConditionType VolumeCondition)
+int Trader::SendOrder(int ind,
+        const char* szInstrument,
+        TThostFtdcDirectionType Direction,
+        const char* szCombOffsetFlag,
+        TThostFtdcVolumeType VolumeTotalOriginal,
+        double LimitPrice)
 {
     if(ind < v_tds.size() && v_tds[ind] != NULL)
-    return TD_SendOrder(v_tds[ind], OrderRef, szInstrument, szExchange, Direction, szCombOffsetFlag, szCombHedgeFlag,
-        VolumeTotalOriginal, LimitPrice, OrderPriceType, TimeCondition, ContingentCondition, StopPrice, VolumeCondition);
-    PrintLog(string(__FUNCTION__) + string("不存在账户: ") + to_string(ind));
+        return TD_SendOrder(v_tds[ind], -1, szInstrument, "", Direction, szCombOffsetFlag, "1",
+                VolumeTotalOriginal, LimitPrice, THOST_FTDC_OPT_LimitPrice, THOST_FTDC_TC_GFD,
+                THOST_FTDC_CC_Immediately, 0, THOST_FTDC_VC_AV);
+    
+    PrintLog(string(__FUNCTION__) + string("不存在账户: ") + to_string(ind), "error");
     return -1;
 }
 
@@ -248,11 +236,49 @@ bool Trader::CancelOrder(int ind, CThostFtdcOrderField *pOrder)
         TD_CancelOrder(v_tds[ind], pOrder);
         return true;
     }
-    PrintLog(string(__FUNCTION__) + string("不存在账户: ") + to_string(ind));
+    PrintLog(string(__FUNCTION__) + string("不存在账户: ") + to_string(ind), "error");
     return false;
 }
 
-
+mxArray *Trader::GetOrder(int ind, string OrderRef)
+{
+    if(ind < v_tds.size() && v_tds[ind] != NULL)
+    {
+        CThostFtdcOrderField order;
+        if (TD_GetOrder(v_tds[ind], OrderRef.c_str(), &order))
+        {
+            mxArray *result;
+            const char *field_names[] = {"BrokerID", "InvestorID", "InstrumentID", "OrderRef", "UserID", "Direction",
+            "CombOffsetFlag", "LimitPrice", "ExchangeID", "OrderSysID",
+            "OrderStatus", "FrontID", "SessionID"};
+            mwSize dims[2] = {1, 1};
+            result = mxCreateStructArray(2, dims, sizeof(field_names)/sizeof(*field_names), field_names);
+            string tmp;
+            mxSetField(result, 0, "BrokerID", mxCreateString(order.BrokerID));
+            mxSetField(result, 0, "InvestorID", mxCreateString(order.InvestorID));
+            mxSetField(result, 0, "InstrumentID", mxCreateString(order.InstrumentID));
+            mxSetField(result, 0, "OrderRef", mxCreateString(order.OrderRef));
+            mxSetField(result, 0, "UserID", mxCreateString(order.UserID));
+            tmp = string("") + order.Direction;
+            mxSetField(result, 0, "Direction", mxCreateString(tmp.c_str()));
+            mxSetField(result, 0, "CombOffsetFlag", mxCreateString(order.CombOffsetFlag));
+            mxSetField(result, 0, "LimitPrice", mxCreateDoubleScalar(order.LimitPrice));
+            mxSetField(result, 0, "ExchangeID", mxCreateString(order.ExchangeID));
+            mxSetField(result, 0, "OrderSysID", mxCreateString(order.OrderSysID));
+            tmp = string("") + order.OrderStatus;
+            mxSetField(result, 0, "OrderStatus", mxCreateString(tmp.c_str()));
+            mxSetField(result, 0, "FrontID", mxCreateDoubleScalar(order.FrontID));
+            mxSetField(result, 0, "SessionID", mxCreateDoubleScalar(order.SessionID));
+            return result;
+        }
+        PrintLog(string(__FUNCTION__) +  string("账户: ") + to_string(ind) + string(" 不存在订单: ") + OrderRef, "error");
+        return mxCreateDoubleScalar(0);
+    }
+    PrintLog(string(__FUNCTION__) + string("不存在账户: ") + to_string(ind), "error");
+    return mxCreateDoubleScalar(0);
+    
+    
+}
 //查持仓
 bool Trader::QryInvestorPosition(int ind, const char* szInstrumentId)
 {
@@ -261,7 +287,7 @@ bool Trader::QryInvestorPosition(int ind, const char* szInstrumentId)
         TD_ReqQryInvestorPosition(v_tds[ind], szInstrumentId);
         return true;
     }
-    PrintLog(string(__FUNCTION__) + string("不存在账户: ") + to_string(ind));
+    PrintLog(string(__FUNCTION__) + string("不存在账户: ") + to_string(ind), "error");
     return false;
 }
 
@@ -273,7 +299,7 @@ bool Trader::QryInvestorPositionDetail(int ind, const char* szInstrumentId)
         TD_ReqQryInvestorPositionDetail(v_tds[ind], szInstrumentId);
         return true;
     }
-    PrintLog(string(__FUNCTION__) + string("不存在账户: ") + to_string(ind));
+    PrintLog(string(__FUNCTION__) + string("不存在账户: ") + to_string(ind), "error");
     return false;
 }
 
@@ -285,7 +311,7 @@ bool Trader::QryTradingAccount(int ind)
         TD_ReqQryTradingAccount(v_tds[ind]);
         return true;
     }
-    PrintLog(string(__FUNCTION__) + string("不存在账户: ") + to_string(ind));
+    PrintLog(string(__FUNCTION__) + string("不存在账户: ") + to_string(ind), "error");
     return false;
 }
 
@@ -326,7 +352,7 @@ bool Trader::QrySettlementInfo(int ind, const char* szTradingDay)
         TD_ReqQrySettlementInfo(td, szTradingDay);
         return true;
     }
-    PrintLog(string(__FUNCTION__) + string("不存在账户: ") + to_string(ind));
+    PrintLog(string(__FUNCTION__) + string("不存在账户: ") + to_string(ind), "error");
     return false;
 }
 

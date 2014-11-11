@@ -54,6 +54,20 @@ bool CTraderApi::WaitForInstrumentGeted()
     return isInstrumentGeted;
 }
 
+bool CTraderApi::GetOrder(const string &OrderRef, CThostFtdcOrderField &order)
+{
+    if (m_orders.count(OrderRef))
+    {
+        order = m_orders[OrderRef];
+        return true;
+    }
+    return false;
+}
+
+int CTraderApi::GetSessionID()
+{
+    return m_RspUserLogin.SessionID;
+}
 void CTraderApi::StopThread()
 {
 	//Í£Ö¹·¢ËÍÏß³Ì
@@ -662,6 +676,14 @@ void CTraderApi::OnRtnOrder(CThostFtdcOrderField *pOrder)
 {
 	if(m_msgQueue)
 		m_msgQueue->Input_OnRtnOrder(this,pOrder);
+    //add Order to map
+    if (m_RspUserLogin.SessionID == pOrder->SessionID)
+    {
+        lock_guard<mutex> cl(m_csOrders);
+        m_orders[string(pOrder->OrderRef)] = *pOrder;
+    }
+    
+    
 }
 
 int CTraderApi::ReqQuoteInsert(

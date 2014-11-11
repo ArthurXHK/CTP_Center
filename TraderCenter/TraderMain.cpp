@@ -30,7 +30,20 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, mxArray *prhs[])
         }
         case 4:
         {
-            
+            int ind = mxGetScalar(prhs[1]);
+            string inst = mxArrayToString(prhs[2]);
+            string direction = mxArrayToString(prhs[3]);
+            string offsetFlag = mxArrayToString(prhs[4]);
+            double volume = mxGetScalar(prhs[5]);
+            double price = mxGetScalar(prhs[6]);
+            plhs[0] = mxCreateDoubleScalar(trader.SendOrder(ind, inst.c_str(), direction[0], offsetFlag.c_str(), volume, price));
+            break;
+        }
+        case 5:
+        {
+            int ind = mxGetScalar(prhs[1]);
+            string ref = mxArrayToString(prhs[2]);
+            plhs[0] = trader.GetOrder(ind, ref);
             break;
         }
         default:

@@ -7,6 +7,8 @@
 #include "MdUserApi.h"
 #include "TraderApi.h"
 #include "CTPMsgQueue.h"
+#include <string>
+using namespace std;
 
 inline CCTPMsgQueue* CTP_GetQueue(void* pMsgQueue)
 {
@@ -55,6 +57,24 @@ QUANTBOXC2CTP_API bool __stdcall TD_WaitForInstrumentGeted(void *pTraderApi)
             return true;
     }
     return false;
+}
+
+QUANTBOXC2CTP_API bool __stdcall TD_GetOrder(void* pTraderApi, const char *OrderRef, CThostFtdcOrderField *order)
+{
+    if (pTraderApi)
+    {
+        return TD_GetApi(pTraderApi)->GetOrder(OrderRef, *order);
+    }
+    return false;
+}
+
+QUANTBOXC2CTP_API int __stdcall TD_GetSessionID(void* pTraderApi)
+{
+    if (pTraderApi)
+    {
+        return TD_GetApi(pTraderApi)->GetSessionID();
+    }
+    return 0;
 }
 
 QUANTBOXC2CTP_API void* __stdcall CTP_CreateMsgQueue()
@@ -487,6 +507,7 @@ QUANTBOXC2CTP_API int __stdcall TD_SendOrder(
 	}
 	return 0;
 }
+
 
 QUANTBOXC2CTP_API void __stdcall TD_CancelOrder(void* pTraderApi,CThostFtdcOrderField *pOrder)
 {

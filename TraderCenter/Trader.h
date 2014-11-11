@@ -12,6 +12,8 @@
 #include <Windows.h>
 #include <map>
 #include <vector>
+#include <mutex>
+#include <atomic>
 using namespace std;
 
 
@@ -25,7 +27,7 @@ public:
         static Trader trader;
         return trader;
     }
-    static void PrintLog(const string &msg, const string type = "normal");
+    static void PrintLog(string msg, string type = "normal");
     //连接行情服务器
     bool ConnectMdServer(const char *file, const char *servername);
     //创建新交易账户，返回账户下标，-1为连接失败
@@ -40,25 +42,19 @@ public:
     void Subscribe(const char* instruments);
     //退订行情
     void Unsubscribe(const char* instruments);
-
+    
     //下单
-    int SendOrder(int ind, int OrderRef,
-        const char* szInstrument,
-        const char* szExchange,
-        TThostFtdcDirectionType Direction,
-        const char* szCombOffsetFlag,
-        const char* szCombHedgeFlag,
-        TThostFtdcVolumeType VolumeTotalOriginal,
-        double LimitPrice,
-        TThostFtdcOrderPriceTypeType OrderPriceType,
-        TThostFtdcTimeConditionType TimeCondition,
-        TThostFtdcContingentConditionType ContingentCondition,
-        double StopPrice,
-        TThostFtdcVolumeConditionType VolumeCondition);
+    int Trader::SendOrder(int ind,
+            const char* szInstrument,
+            TThostFtdcDirectionType Direction,
+            const char* szCombOffsetFlag,
+            TThostFtdcVolumeType VolumeTotalOriginal,
+            double LimitPrice);
     
     // 撤单
     bool CancelOrder(int ind, CThostFtdcOrderField *pOrder);
-
+    // 获取订单信息
+    mxArray *GetOrder(int ind, string OrderRef);
     //查持仓
     bool QryInvestorPosition(int ind, const char* szInstrumentId);
     //查持仓明细
@@ -107,7 +103,7 @@ private:
     static void __stdcall OnRspQryInstrumentMarginRate(void* pTraderApi, CThostFtdcInstrumentMarginRateField *pInstrumentMarginRate, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
     //查询投资者持仓回报
     static void __stdcall OnRspQryInvestorPosition(void* pTraderApi, CThostFtdcInvestorPositionField *pInvestorPosition, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
-
+    
     //查询持仓详细回报
     static void __stdcall OnRspQryInvestorPositionDetail(void* pTraderApi, CThostFtdcInvestorPositionDetailField *pInvestorPositionDetail, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
     //查询订单回报
@@ -131,7 +127,7 @@ private:
     static void __stdcall OnRspQuoteInsert(void* pTraderApi, CThostFtdcInputQuoteField *pInputQuote, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
     static void __stdcall OnRtnForQuoteRsp(void* pMdUserApi, CThostFtdcForQuoteRspField *pForQuoteRsp);
     static void __stdcall OnRtnQuote(void* pTraderApi, CThostFtdcQuoteField *pQuote);
-
+    
 private:
     //隐藏默认构造
     Trader()
@@ -144,7 +140,7 @@ private:
     }
     ~Trader(){};
     Trader& operator=(Trader const&);
-
+    
     static void *md;//行情端口
     static void *td; //用于获取交易合约的交易端口（非交易用）
     static void *pmd, *ptd; //暂存行情端口地址
@@ -160,6 +156,7 @@ private:
     static string mdServer; //行情服务器地址
     static string tdServer; //交易服务器地址
     static string logpath; //日志路径
+    static mutex csLog;
 };
 
 #endif
