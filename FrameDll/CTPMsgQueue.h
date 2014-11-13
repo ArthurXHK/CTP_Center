@@ -338,8 +338,8 @@ private:
 	HANDLE						m_hEvent;
 	HANDLE						m_hThread;
 
-	MSQueue<SMsgItem*>			m_queue_MD;			//响应队列
-	MSQueue<SMsgItem*>			m_queue_TD;			//响应队列
+    spsc_queue<SMsgItem*>			m_queue_MD;			//响应队列
+    spsc_queue<SMsgItem*>			m_queue_TD;			//响应队列
 
 	//回调函数指针（按字母排序）
 	fnOnConnect							m_fnOnConnect;

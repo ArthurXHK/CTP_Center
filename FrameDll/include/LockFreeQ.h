@@ -1,309 +1,143 @@
-// Copyright Idaho O Edokpayi 2008
-// Code is governed by Code Project Open License 
+#ifndef LOCKFREEQ_H
+#define LOCKFREEQ_H
+#include "atomicops.h"
+#include <cstdlib>		// For std::size_t
 
-#include <exception>
-#include <windows.h>
-#include <algorithm>
+// From http://www.1024cores.net/home/lock-free-algorithms/queues/unbounded-spsc-queue
+// (and http://software.intel.com/en-us/articles/single-producer-single-consumer-queue)
 
-using namespace std;
+// load with 'consume' (data-dependent) memory ordering 
+template<typename T> 
+T load_consume(T const* addr) 
+{ 
+    // hardware fence is implicit on x86 
+    T v = *const_cast<T const volatile*>(addr); 
+    moodycamel::compiler_fence(moodycamel::memory_order_seq_cst);
+    return v; 
+} 
 
-/////////////////////////
-// Array based lock free
-// queue 
-/////////////////////////
-template<class T>
-class ArrayQ
-{
-private:
-	T* pData;
-	volatile LONG nWrite;
-	volatile LONG nRead;
-	volatile LONG nSize;
-	// size of array at creation
-	enum SizeEnum{ InitialSize=240 };
-	// Lock pData to copy
-	void Resize()
-	{
-		// Declare temporary size variable
-		LONG nNewSize = 0;		
-		CRITICAL_SECTION cs;
+// store with 'release' memory ordering 
+template<typename T> 
+void store_release(T* addr, T v) 
+{ 
+    // hardware fence is implicit on x86 
+    moodycamel::compiler_fence(moodycamel::memory_order_seq_cst);
+    *const_cast<T volatile*>(addr) = v; 
+} 
 
-		// double the size of our queue
-		InterlockedExchangeAdd(&nNewSize,2 * nSize);
+// cache line size on modern x86 processors (in bytes) 
+size_t const cache_line_size = 64; 
+// single-producer/single-consumer queue 
+template<typename T> 
+class spsc_queue 
+{ 
+public: 
+  spsc_queue() 
+  { 
+      node* n = new node; 
+      n->next_ = 0; 
+      tail_ = head_ = first_= tail_copy_ = n; 
+  }
 
-		// allocate the new array
-		T* pNewData = new T[nNewSize];
-		const ULONG uiTSize = sizeof(T);
+  explicit spsc_queue(size_t prealloc)
+  {
+      node* n = new node;
+      n->next_ = 0;
+      tail_ = head_ = first_ = tail_copy_ = n;
 
-		// Initialize the critical section to protect the copy
-		InitializeCriticalSection(&cs);
+      // [CD] Not (at all) the most efficient way to pre-allocate memory, but it works
+      T dummy = T();
+      for (size_t i = 0; i != prealloc; ++i) {
+          enqueue(dummy);
+      }
+      for (size_t i = 0; i != prealloc; ++i) {
+          try_dequeue(dummy);
+      }
+  }
 
-		// Enter the critical section
-		EnterCriticalSection(&cs);
+  ~spsc_queue() 
+  { 
+      node* n = first_; 
+      do 
+      { 
+          node* next = n->next_; 
+          delete n; 
+          n = next; 
+      } 
+      while (n); 
+  } 
 
-		// copy the old data
-		memcpy_s((void*)pNewData,nNewSize*uiTSize,(void*)pData,nSize*uiTSize);		
+  void enqueue(T v) 
+  { 
+      node* n = alloc_node(); 
+      n->next_ = 0; 
+      n->value_ = v; 
+      store_release(&head_->next_, n); 
+      head_ = n; 
+  } 
 
-		// dump the old array
-		delete[] pData;
+  // returns 'false' if queue is empty 
+  bool dequeue(T& v) 
+  { 
+      if (load_consume(&tail_->next_)) 
+      { 
+          v = tail_->next_->value_; 
+          store_release(&tail_, tail_->next_); 
+          return true; 
+      } 
+      else 
+      { 
+          return false; 
+      } 
+  } 
 
-		// save the new array
-		pData = pNewData;
+private: 
+  // internal node structure 
+  struct node 
+  { 
+      node* next_; 
+      T value_; 
+  }; 
 
-		// save the new size
-		nSize = nNewSize;
+  // consumer part 
+  // accessed mainly by consumer, infrequently be producer 
+  node* tail_; // tail of the queue 
 
-		// Leave the critical section
-		LeaveCriticalSection(&cs);
+  // delimiter between consumer part and producer part, 
+  // so that they situated on different cache lines 
+  char cache_line_pad_ [cache_line_size]; 
 
-		// Delete the critical section
-		DeleteCriticalSection(&cs);
-	}
-public:
-	ArrayQ()	: nWrite(0), nRead(0), pData(new T[InitialSize]), nSize(InitialSize)
-	{
+  // producer part 
+  // accessed only by producer 
+  node* head_; // head of the queue 
+  node* first_; // last unused node (tail of node cache) 
+  node* tail_copy_; // helper (points somewhere between first_ and tail_) 
 
-	}
+  node* alloc_node() 
+  { 
+      // first tries to allocate node from internal node cache, 
+      // if attempt fails, allocates node via ::operator new() 
 
-	~ArrayQ()
-	{
-		delete[] pData;
-	}
+      if (first_ != tail_copy_) 
+      { 
+          node* n = first_; 
+          first_ = first_->next_; 
+          return n; 
+      } 
+      tail_copy_ = load_consume(&tail_); 
+      if (first_ != tail_copy_) 
+      { 
+          node* n = first_; 
+          first_ = first_->next_; 
+          return n; 
+      } 
+      node* n = new node; 
+      return n; 
+  } 
 
-
-	void enqueue( const T& t ) 
-	{
-		// temporary write index and size
-		volatile LONG nTempWrite, nTempSize;
-
-		// atomic copy of the originals to temporary storage
-		InterlockedExchange(&nTempWrite,nWrite);
-		InterlockedExchange(&nTempSize,nSize);
-
-		// increment before bad things happen
-		InterlockedIncrement(&nWrite);
-
-		// check to make sure we haven't exceeded our storage 
-		if(nTempWrite == nTempSize)
-		{
-			// we should resize the array even if it means using a lock
-			Resize();			
-		}
-
-		pData[nTempWrite] = t;		
-	}
-
-	// returns false if queue is empty
-	bool dequeue( T& t ) 
-	{
-		// temporary write index and size
-		volatile LONG nTempWrite, nTempRead;
-
-		// atomic copy of the originals to temporary storage
-		InterlockedExchange(&nTempWrite,nWrite);
-		InterlockedExchange(&nTempRead,nRead);
-
-		// increment before bad things happen
-		InterlockedIncrement(&nRead);
-
-		// check to see if queue is empty
-		if(nTempRead == nTempWrite)
-		{
-			// reset both indices
-			InterlockedCompareExchange(&nRead,0,nTempRead+1);
-			InterlockedCompareExchange(&nWrite,0,nTempWrite);
-			return false;
-		}
-
-		t = pData[nTempRead];
-		return true;
-	}
+  spsc_queue(spsc_queue const&); 
+  spsc_queue& operator = (spsc_queue const&); 
 
 };
 
-
-//////////////////////////////
-// queue based on work of 
-// Maged M. Michael &
-// Michael L. Scott
-//////////////////////////////
-
-template< class T >
-class MSQueue
-{
-private:
-
-	// pointer structure
-	struct node_t;
-
-	struct pointer_t 
-	{
-		node_t* ptr;
-		LONG count;
-		// default to a null pointer with a count of zero
-		pointer_t(): ptr(NULL),count(0){}
-		pointer_t(node_t* node, const LONG c ) : ptr(node),count(c){}
-		pointer_t(const pointer_t& p)
-		{
-			InterlockedExchange(&count,p.count);
-			InterlockedExchangePointer(&ptr,p.ptr);
-		}
-
-		pointer_t(const pointer_t* p): ptr(NULL),count(0)
-		{
-			if(NULL == p)
-				return;
-
-			InterlockedExchange(&count,const_cast< LONG >(p->count));
-			InterlockedExchangePointer(ptr,const_cast< node_t* >(p->ptr));			
-		}
-
-	};
-
-	// node structure
-	struct node_t 
-	{
-		T value;
-		pointer_t next;
-		// default constructor
-		node_t(){}
-	};
-
-	pointer_t Head;
-	pointer_t Tail;
-	bool CAS(pointer_t& dest,pointer_t& compare, pointer_t& value)
-	{
-		if(compare.ptr==InterlockedCompareExchangePointer((PVOID volatile*)&dest.ptr,value.ptr,compare.ptr))
-		{
-			InterlockedExchange(&dest.count,value.count);
-			return true;
-		}
-
-		return false;
-	}
-public:	
-	// default constructor
-	MSQueue()
-	{
-		node_t* pNode = new node_t();
-		Head.ptr = Tail.ptr = pNode;
-	}
-	~MSQueue()
-	{
-		// remove the dummy head
-		delete Head.ptr;
-	}
-
-	// insert items of class T in the back of the queue
-	// items of class T must implement a default and copy constructor
-	// Enqueue method
-	void enqueue(const T& t)
-	{
-		// Allocate a new node from the free list
-		node_t* pNode = new node_t(); 
-
-		// Copy enqueued value into node
-		pNode->value = t;
-
-		// Keep trying until Enqueue is done
-		bool bEnqueueNotDone = true;
-
-		while(bEnqueueNotDone)
-		{
-			// Read Tail.ptr and Tail.count together
-			pointer_t tail(Tail);
-
-			bool nNullTail = (NULL==tail.ptr); 
-			// Read next ptr and count fields together
-			pointer_t next( // ptr 
-							(nNullTail)? NULL : tail.ptr->next.ptr,
-							// count
-							(nNullTail)? 0 : tail.ptr->next.count
-							) ;
-
-
-			// Are tail and next consistent?
-			if(tail.count == Tail.count && tail.ptr == Tail.ptr)
-			{
-				if(NULL == next.ptr) // Was Tail pointing to the last node?
-				{
-					// Try to link node at the end of the linked list										
-					if(CAS( tail.ptr->next, next, pointer_t(pNode,next.count+1) ) )
-					{
-						bEnqueueNotDone = false;
-					} // endif
-
-				} // endif
-
-				else // Tail was not pointing to the last node
-				{
-					// Try to swing Tail to the next node
-					CAS(Tail, tail, pointer_t(next.ptr,tail.count+1) );
-				}
-
-			} // endif
-
-		} // endloop
-	}
-
-	// remove items of class T from the front of the queue
-	// items of class T must implement a default and copy constructor
-	// Dequeue method
-	bool dequeue(T& t)
-	{
-		pointer_t head;
-		// Keep trying until Dequeue is done
-		bool bDequeNotDone = true;
-		while(bDequeNotDone)
-		{
-			// Read Head
-			head = Head;
-			// Read Tail
-			pointer_t tail(Tail);
-
-			if(head.ptr == NULL)
-			{
-				// queue is empty
-				return false;
-			}
-
-			// Read Head.ptr->next
-			pointer_t next(head.ptr->next);
-
-			// Are head, tail, and next consistent
-			if(head.count == Head.count && head.ptr == Head.ptr)
-			{
-				if(head.ptr == tail.ptr) // is tail falling behind?
-				{
-					// Is the Queue empty
-					if(NULL == next.ptr)
-					{
-						// queue is empty cannot deque
-						return false;
-					}
-					CAS(Tail,tail, pointer_t(next.ptr,tail.count+1)); // Tail is falling behind. Try to advance it
-				} // endif
-
-				else // no need to deal with tail
-				{
-					// read value before CAS otherwise another deque might try to free the next node
-					t = next.ptr->value;
-
-					// try to swing Head to the next node
-					if(CAS(Head,head, pointer_t(next.ptr,head.count+1) ) )
-					{
-						bDequeNotDone = false;
-					}
-				}
-
-			} // endif
-
-		} // endloop
-		
-		// It is now safe to free the old dummy node
-		delete head.ptr;
-
-		// queue was not empty, deque succeeded
-		return true;
-	}
-};
+#endif

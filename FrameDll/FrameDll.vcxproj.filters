@@ -60,6 +60,9 @@
     <ClInclude Include="..\include\ThostFtdcUserApiStruct.h">
       <Filter>CTP_API</Filter>
     </ClInclude>
+    <ClInclude Include="include\atomicops.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="include\toolkit.cpp">
