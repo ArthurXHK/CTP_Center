@@ -132,3 +132,13 @@ mxArray *DataCenter::GetTick(mxArray *inst, mxArray *start, mxArray *end)
     }
     return result;
 }
+
+// void RemoveTick(mxArray *inst ,mxArray *start, mxArray *end)
+// {
+//     if(!CheckConnection())
+//     {
+//         PrintLog("[GetTick]未连接数据库", "error");
+//         return NULL;
+//     }
+//     collection = "tick";
+// }

@@ -77,7 +77,6 @@
     <ClInclude Include="..\include\ThostFtdcUserApiStruct.h" />
     <ClInclude Include="CTPMsgQueue.h" />
     <ClInclude Include="include\atomicops.h" />
-    <ClInclude Include="include\Lock.h" />
     <ClInclude Include="include\LockFreeQ.h" />
     <ClInclude Include="include\toolkit.h" />
     <ClInclude Include="MdUserApi.h" />

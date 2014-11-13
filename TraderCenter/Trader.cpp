@@ -219,22 +219,38 @@ int Trader::SendOrder(int ind,
         TThostFtdcVolumeType VolumeTotalOriginal,
         double LimitPrice)
 {
+    int res;
     if(ind < v_tds.size() && v_tds[ind] != NULL)
-        return TD_SendOrder(v_tds[ind], -1, szInstrument, "", Direction, szCombOffsetFlag, "1",
+    {
+        
+        res = TD_SendOrder(v_tds[ind], -1, szInstrument, "", Direction, szCombOffsetFlag, "1",
                 VolumeTotalOriginal, LimitPrice, THOST_FTDC_OPT_LimitPrice, THOST_FTDC_TC_GFD,
                 THOST_FTDC_CC_Immediately, 0, THOST_FTDC_VC_AV);
-    
+        PrintLog(string(__FUNCTION__) + string("账户: ") + to_string(ind) + "已经下单");
+        return res;
+    }
     PrintLog(string(__FUNCTION__) + string("不存在账户: ") + to_string(ind), "error");
     return -1;
 }
 
 
-bool Trader::CancelOrder(int ind, CThostFtdcOrderField *pOrder)
+bool Trader::CancelOrder(int ind, string OrderRef)
 {
+    
     if(ind < v_tds.size() && v_tds[ind] != NULL)
     {
-        TD_CancelOrder(v_tds[ind], pOrder);
-        return true;
+        CThostFtdcOrderField order;
+        if(TD_GetOrder(v_tds[ind], OrderRef.c_str(), &order))
+        {
+            TD_CancelOrder(v_tds[ind], &order);
+            return true;
+        }
+        
+        else
+        {
+            PrintLog(string(__FUNCTION__) +  string("账户: ") + to_string(ind) + string(" 不存在订单: ") + OrderRef, "error");
+            return false;
+        }
     }
     PrintLog(string(__FUNCTION__) + string("不存在账户: ") + to_string(ind), "error");
     return false;

@@ -52,7 +52,7 @@ public:
             double LimitPrice);
     
     // 撤单
-    bool CancelOrder(int ind, CThostFtdcOrderField *pOrder);
+    bool CancelOrder(int ind, string OrderRef);
     // 获取订单信息
     mxArray *GetOrder(int ind, string OrderRef);
     //查持仓

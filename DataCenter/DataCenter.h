@@ -31,6 +31,7 @@ public:
     bool connect(const string ip = "localhost", const string db = "testMarketData");
     void disconnect();
     mxArray *GetTick(mxArray *inst, mxArray *start, mxArray *end);
+//     void RemoveTick(mxArray *inst ,mxArray *start, mxArray *end);
     
 private:
     DataCenter()

@@ -36,9 +36,6 @@
     <ClInclude Include="TraderApi.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="include\Lock.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="include\LockFreeQ.h">
       <Filter>头文件</Filter>
     </ClInclude>
