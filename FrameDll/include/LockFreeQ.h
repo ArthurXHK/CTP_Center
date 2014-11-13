@@ -51,7 +51,7 @@ public:
           enqueue(dummy);
       }
       for (size_t i = 0; i != prealloc; ++i) {
-          try_dequeue(dummy);
+          dequeue(dummy);
       }
   }
 
