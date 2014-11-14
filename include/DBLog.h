@@ -2,8 +2,6 @@
 #ifndef DBLOG_H
 #define DBLOG_H
 
-#include "toolkit.h"
-
 #include <iostream>
 #include <string>
 #include <mutex>

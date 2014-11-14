@@ -8,6 +8,7 @@
 #include "mex.h"
 #include "matrix.h"
 #include "DBLog.h"
+#include "ThostFtdcUserApiStruct_old.h"
 
 #include <iostream>
 #include <string>
@@ -31,8 +32,8 @@ public:
     bool connect(const string ip = "localhost", const string db = "testMarketData");
     void disconnect();
     mxArray *GetTick(mxArray *inst, mxArray *start, mxArray *end);
-//     void RemoveTick(mxArray *inst ,mxArray *start, mxArray *end);
-    
+    void RemoveTick(mxArray *inst ,mxArray *start, mxArray *end);
+    bool InsertTickByRawfile(mxArray *file);
 private:
     DataCenter()
     {
@@ -43,6 +44,7 @@ private:
     ~DataCenter(){}
     DataCenter& operator=(DataCenter const&){}
     
+    time_t GetEpochTime(struct tm &t, string UpdateTime, int milisecond);
     static mongo::DBClientConnection *pCon; //数据库连接口
     static DBLog dblog;                             //日志
     static string serverIP;                          //服务器地址

@@ -6,6 +6,5 @@ for i = 2:length(tick)
         t = t + 1;
     end
 end
-ind(t + 1) = 111;
 end
 
