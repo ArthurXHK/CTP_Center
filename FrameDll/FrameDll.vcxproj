@@ -39,9 +39,9 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <OutDir>$(CTPCenter)\lib</OutDir>
-    <IncludePath>E:\workplace\CTP_Center\include;$(IncludePath)</IncludePath>
-    <LibraryPath>E:\workplace\CTP_Center\lib;$(LibraryPath)</LibraryPath>
+    <OutDir>..\lib</OutDir>
+    <IncludePath>..\include;$(IncludePath)</IncludePath>
+    <LibraryPath>..\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
