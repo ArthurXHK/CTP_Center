@@ -34,6 +34,8 @@ public:
     mxArray *GetTick(mxArray *inst, mxArray *start, mxArray *end);
     void RemoveTick(mxArray *inst ,mxArray *start, mxArray *end);
     bool InsertTickByRawfile(mxArray *file);
+    void InsertBar(mxArray *bar);
+    mxArray *GetBar(mxArray *inst, mxArray *tp, mxArray *start, mxArray *end);
 private:
     DataCenter()
     {

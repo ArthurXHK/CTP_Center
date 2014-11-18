@@ -83,8 +83,8 @@ mxArray *DataCenter::GetTick(mxArray *inst, mxArray *start, mxArray *end)
     BSONObjBuilder timePeriod;
     
     b.append("InstrumentID", instrument);
-    timePeriod.appendDate("$gte",( (st - 719529) * 24LL)* 60LL * 60LL * 1000LL);
-    timePeriod.appendDate("$lte", ( (et - 719529) * 24LL) * 60LL * 60LL * 1000LL);
+    timePeriod.appendDate("$gte",( (st - 719529) * 24LL - 8)* 60LL * 60LL * 1000LL);
+    timePeriod.appendDate("$lte", ( (et - 719529) * 24LL - 8) * 60LL * 60LL * 1000LL);
     b.append("UpdateTime", timePeriod.done());
     BSONObj qry = b.done();
     
@@ -203,7 +203,6 @@ bool DataCenter::InsertTickByRawfile(mxArray *file)
         for (int i = 0; i < len; ++i)
         {
             bool ok = ReadFile(hFile, pDepthMarketData, sizeof(CThostFtdcDepthMarketDataFieldOld), &readsize, NULL);
-            mexPrintf("%s\n", pDepthMarketData->UpdateTime);
             BSONObjBuilder b;
             b.appendDate("UpdateTime", Date_t(GetEpochTime(t, pDepthMarketData->UpdateTime, pDepthMarketData->UpdateMillisec)));
             b.append("InstrumentID", pDepthMarketData->InstrumentID);
@@ -238,4 +237,95 @@ bool DataCenter::InsertTickByRawfile(mxArray *file)
     }
     CloseHandle(hFile);
     return true;
+}
+
+void DataCenter::InsertBar(mxArray *bar)
+{
+    if(!CheckConnection())
+    {
+        PrintLog("[InsertBar]未连接数据库", "error");
+        return ;
+    }
+    int len = mxGetNumberOfElements(bar);
+    for(int i = 0; i < len; ++i)
+    {
+        BSONObjBuilder b;
+        b.append("instrument", mxArrayToString(mxGetField(bar, i, "instrument")));
+        b.appendDate("time", Date_t((long long)mxGetScalar(mxGetField(bar, i, "time")) ));
+        b.append("type", (int)mxGetScalar(mxGetField(bar, i, "type")));
+        b.append("o", mxGetScalar(mxGetField(bar, i, "o")));
+        b.append("h", mxGetScalar(mxGetField(bar, i, "h")));
+        b.append("l", mxGetScalar(mxGetField(bar, i, "l")));
+        b.append("c", mxGetScalar(mxGetField(bar, i, "c")));
+        b.append("v", mxGetScalar(mxGetField(bar, i, "v")));
+        b.append("i", mxGetScalar(mxGetField(bar, i, "i")));
+        pCon->insert(database + ".bar", b.done());
+    }
+}
+
+mxArray *DataCenter::GetBar(mxArray *inst, mxArray *tp, mxArray *start, mxArray *end)
+{
+    if(!CheckConnection())
+    {
+        PrintLog("[GetBar]未连接数据库", "error");
+        return NULL;
+    }
+    mxArray *result;
+    const char *field_names[] = {"tradingday", "time", "instrument", "type", "o", "h", "l", "c", "v", "i"};
+    
+    string instrument = mxArrayToString(inst);
+    int type = mxGetScalar(tp);
+    double st = mxGetScalar(start);
+    double et = mxGetScalar(end);
+    auto_ptr<DBClientCursor> cursor;
+    BSONObjBuilder b;
+    BSONObjBuilder timePeriod;
+    
+    b.append("instrument", instrument);
+    b.append("type", type);
+    timePeriod.appendDate("$gte",( (st - 719529) * 24LL - 8)* 60LL * 60LL * 1000LL);
+    timePeriod.appendDate("$lte", ( (et - 719529) * 24LL - 8) * 60LL * 60LL * 1000LL);
+    b.append("time", timePeriod.done());
+    BSONObj qry = b.done();
+    
+    cursor = pCon->query(database + ".bar", qry);
+    int size = cursor->itcount();
+    mexPrintf("%d\n", size);
+    mwSize dims[2] = {1, size};
+    result = mxCreateStructArray(2, dims, sizeof(field_names)/sizeof(*field_names), field_names);
+    cursor = pCon->query(database + ".bar", qry);
+    BSONObj p;
+    
+    int i = 0;
+    
+    while(cursor->more())
+    {
+        if(i >= size)
+        {
+            mexWarnMsgTxt("查询范围在行情写入范围中\n");
+            break;
+        }
+        p = cursor->next();
+        tm buf;
+        
+        Date_t pkTime = Date_t(p["time"].Date().millis + 8 * 3600000LL);
+        double time = pkTime.millis%1000 / 100 / 100000.0;
+        pkTime.toTm(&buf);
+        int day = (buf.tm_year + 1900) * 10000 + (buf.tm_mon + 1) * 100 + buf.tm_mday;
+        time = time + buf.tm_hour + buf.tm_min / 100.0 + buf.tm_sec / 10000.0;
+        
+        mxSetField(result, i, "tradingday", mxCreateDoubleScalar(day));
+        mxSetField(result, i, "time", mxCreateDoubleScalar(time));
+        mxSetField(result, i, "instrument", mxCreateString(instrument.c_str()));
+        mxSetField(result, i, "type", mxCreateDoubleScalar(type));
+        mxSetField(result, i, "o", mxCreateDoubleScalar( p["o"].Double() ));
+        mxSetField(result, i, "h", mxCreateDoubleScalar(p["h"].Double()));
+        mxSetField(result, i, "l", mxCreateDoubleScalar(p["l"].Double()));
+        mxSetField(result, i, "c", mxCreateDoubleScalar(p["c"].Double()));
+        mxSetField(result, i, "v", mxCreateDoubleScalar(p["v"].Double()));
+        mxSetField(result, i, "i", mxCreateDoubleScalar(p["i"].Double()));
+        ++i;
+        
+    }
+    return result;
 }

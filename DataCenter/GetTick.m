@@ -1,14 +1,13 @@
 function tick = GetTick(varargin)
 st = today;
 et = today + 1;
-dt = datenum(0, 0, 0, 8, 0, 0);
 switch(nargin)
     case 1
-        tick = dbmain(3, varargin{1}, st - dt, et - dt);
+        tick = dbmain(3, varargin{1}, st, et);
     case 2
-        tick = dbmain(3, varargin{1}, varargin{2} - dt, et - dt);
+        tick = dbmain(3, varargin{1}, varargin{2}, et);
     case 3
-        tick = dbmain(3, varargin{1}, varargin{2} - dt, varargin{3} - dt);
+        tick = dbmain(3, varargin{1}, varargin{2}, varargin{3});
     otherwise
         error('GetTick参数个数错误[1-3]!');
 end

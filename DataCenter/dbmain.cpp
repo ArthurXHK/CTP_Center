@@ -41,6 +41,16 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, mxArray *prhs[])
             plhs[0] = mxCreateLogicalScalar(DCenter.InsertTickByRawfile(prhs[1]));
             break;
         }
+        case 6:
+        {
+            DCenter.InsertBar(prhs[1]);
+            break;
+        }
+        case 7: 
+        {
+            plhs[0] = DCenter.GetBar(prhs[1], prhs[2], prhs[3], prhs[4]);
+            break;
+        }
         default:
             mexPrintf("Î´ÕÒµ½²Ù×÷\n");
             break;
