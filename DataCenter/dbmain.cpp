@@ -51,6 +51,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, mxArray *prhs[])
             plhs[0] = DCenter.GetBar(prhs[1], prhs[2], prhs[3], prhs[4]);
             break;
         }
+        case 8:
+        {
+            plhs[0] = DCenter.GetInstrument(prhs[1]);
+            break;
+        }
         default:
             mexPrintf("Î´ÕÒµ½²Ù×÷\n");
             break;

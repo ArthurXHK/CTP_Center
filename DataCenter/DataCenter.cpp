@@ -190,7 +190,7 @@ bool DataCenter::InsertTickByRawfile(mxArray *file)
         struct tm t;
         if(len > 0)
         {
-            size_t pos = sFile.find("_"); 
+            size_t pos = sFile.find("_");
             string datestr = sFile.substr(pos + 1, 8);
             int datenum = stoi(sFile.substr(pos + 1, 8));
             
@@ -230,7 +230,7 @@ bool DataCenter::InsertTickByRawfile(mxArray *file)
         CloseHandle(hFile);
         return true;
     }
-    else 
+    else
     {
         CloseHandle(hFile);
         return false;
@@ -326,6 +326,69 @@ mxArray *DataCenter::GetBar(mxArray *inst, mxArray *tp, mxArray *start, mxArray 
         mxSetField(result, i, "i", mxCreateDoubleScalar(p["i"].Double()));
         ++i;
         
+    }
+    return result;
+}
+
+mxArray *DataCenter::GetInstrument(mxArray *inst)
+{
+    mxArray *result;
+    const char *field_names[] = {"InstrumentID", "ExchangeID", "InstrumentName",
+    "ProductID", "DeliveryYear", "DeliveryMonth",
+    "PriceTick", "CreateDate", "OpenDate", "ExpireDate",
+    "StartDelivDate", "EndDelivDate", "LongMarginRatio", "ShortMarginRatio"};
+    string instrument = mxArrayToString(inst);
+    auto_ptr<DBClientCursor> cursor;
+    BSONObjBuilder b;
+    int size = 0;
+    if(instrument.size() > 2)
+    {
+        b.append("InstrumentID", instrument);
+        cursor = pCon->query(database + ".instrument", b.done());
+        size = 1;
+    }
+    else if(instrument.size() == 0)
+    {
+        size = pCon->count(database + ".instrument");
+        cursor = pCon->query(database + ".instrument", BSONObj());
+    }
+    else
+    {
+        b.append("ProductID", instrument);
+        BSONObj qry = b.done();
+        cursor = pCon->query(string("MarketData.") + collection, qry);
+        size = cursor->itcount();
+        cursor = pCon->query(string("MarketData.") + collection, qry);
+    }
+    
+    mwSize dims[2] = {1, size};
+    result = mxCreateStructArray(2, dims, sizeof(field_names)/sizeof(*field_names), field_names);
+    int i = 0;
+    BSONObj p;
+    while(cursor->more())
+    {
+        if(i >= size)
+        {
+            mexWarnMsgTxt("查询时数据库正在写入合约信息");
+            break;
+        }
+        p = cursor->next();
+        mxSetField(result, i, "InstrumentID", mxCreateString(p["InstrumentID"].String().c_str()));
+        mxSetField(result, i, "ExchangeID", mxCreateString(p["ExchangeID"].String().c_str()));
+        mxSetField(result, i, "InstrumentName", mxCreateString(p["InstrumentName"].String().c_str()));
+        mxSetField(result, i, "ProductID", mxCreateString(p["ProductID"].String().c_str()));
+        mxSetField(result, i, "DeliveryYear", mxCreateDoubleScalar(p["DeliveryYear"].Int()));
+        mxSetField(result, i, "DeliveryMonth", mxCreateDoubleScalar(p["DeliveryMonth"].Int()));
+        mxSetField(result, i, "PriceTick", mxCreateDoubleScalar(p["PriceTick"].Double()));
+        mxSetField(result, i, "CreateDate", mxCreateString(p["CreateDate"].String().c_str()));
+        mxSetField(result, i, "OpenDate", mxCreateString(p["OpenDate"].String().c_str()));
+        mxSetField(result, i, "ExpireDate", mxCreateString(p["ExpireDate"].String().c_str()));
+        mxSetField(result, i, "StartDelivDate", mxCreateString(p["StartDelivDate"].String().c_str()));
+        mxSetField(result, i, "EndDelivDate", mxCreateString(p["EndDelivDate"].String().c_str()));
+        mxSetField(result, i, "LongMarginRatio", mxCreateDoubleScalar(p["LongMarginRatio"].Double()));
+        mxSetField(result, i, "ShortMarginRatio", mxCreateDoubleScalar(p["ShortMarginRatio"].Double()));
+        
+        ++i;
     }
     return result;
 }
