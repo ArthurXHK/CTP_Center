@@ -15,7 +15,8 @@ using namespace std;
 
 // 获取unix epoch时间
 time_t GetEpochTime(SYSTEMTIME st, string UpdateTime, int milisecond);
-
+//获取1min时间
+time_t GetBarTime(SYSTEMTIME st, string UpdateTime);
 //转换GBK中文到UTF8格式
 string GBKToUTF8(const char* strGBK);
 

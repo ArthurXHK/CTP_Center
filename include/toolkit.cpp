@@ -22,6 +22,25 @@ time_t GetEpochTime(SYSTEMTIME st, string UpdateTime, int milisecond)
     return res * 1000 + milisecond;
 }
 
+time_t GetBarTime(SYSTEMTIME st, string UpdateTime)
+{
+    struct tm t;
+    time_t res;
+    t.tm_year = st.wYear - 1900;
+    t.tm_mon = st.wMonth - 1;
+    t.tm_mday = st.wDay;
+    t.tm_sec = 0;
+    sscanf(UpdateTime.c_str(), "%d:%d", &t.tm_hour, &t.tm_min);
+    t.tm_isdst = -1;
+    res = mktime(&t);
+    //如果是半夜则加一天时间
+    if (t.tm_hour >= 0 && t.tm_hour <= 3)
+    {
+        res += 24 * 60 * 60;
+    }
+    return res * 1000;
+}
+
 //转换GBK中文到UTF8格式
 string GBKToUTF8(const char* strGBK)
 {

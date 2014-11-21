@@ -57,6 +57,8 @@ private:
     void ReadInifile(const char *file, const char *servername);
     //注册所有回调
     void CTP_RegAllCallback(void *tmsgQueue);
+    //更新1min数据
+    static void UpdateBar(CThostFtdcDepthMarketDataField *pDepthMarketData);
     //心跳线程
     friend DWORD WINAPI HeartBeatThread(LPVOID pM);
     //开辟指针空间

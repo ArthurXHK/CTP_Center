@@ -31,8 +31,50 @@ void __stdcall DataServer::OnRtnDepthMarketData(void* pMdUserApi, CThostFtdcDept
     b.append("OpenInterest", pDepthMarketData->OpenInterest > INF ? -1 : pDepthMarketData->OpenInterest);
     b.append("SettlementPrice", pDepthMarketData->SettlementPrice > INF ? -1 : pDepthMarketData->SettlementPrice);
     pCon->insert(database + ".tick", b.done());
+
+    UpdateBar(pDepthMarketData);
 }
 
+void DataServer::UpdateBar(CThostFtdcDepthMarketDataField *pDepthMarketData)
+{
+    BSONObjBuilder b;
+    BSONObjBuilder timePeriod;
+    Date_t time = Date_t(GetBarTime(st, pDepthMarketData->UpdateTime));
+    b.append("instrument", pDepthMarketData->InstrumentID);
+    b.append("type", 1);
+    timePeriod.appendDate("$gte", time - 1);
+    timePeriod.appendDate("$lte", time + 1);
+    b.append("time", timePeriod.done());
+    BSONObj qry = b.done();
+
+    auto_ptr<DBClientCursor> cursor;
+    cursor = pCon->query(database + ".bar", qry);
+    BSONObjBuilder bsonbar;
+    bsonbar.append("instrument", pDepthMarketData->InstrumentID);
+    bsonbar.append("time", time);
+    bsonbar.append("type", 1);
+    bsonbar.append("v", pDepthMarketData->Volume);
+    bsonbar.append("i", pDepthMarketData->OpenInterest);
+        
+    if (cursor->more())
+    {
+        BSONObj p = cursor->next();
+        bsonbar.append("o", p["o"].Double());
+        bsonbar.append("h", p["h"].Double() > pDepthMarketData->LastPrice ? p["h"].Double() : pDepthMarketData->LastPrice);
+        bsonbar.append("l", p["l"].Double() < pDepthMarketData->LastPrice ? p["l"].Double() : pDepthMarketData->LastPrice);
+        bsonbar.append("c", pDepthMarketData->LastPrice);
+        
+        pCon->update(database + ".bar", qry, bsonbar.done());
+    }
+    else
+    {
+        bsonbar.append("o", pDepthMarketData->LastPrice);
+        bsonbar.append("h", pDepthMarketData->LastPrice);
+        bsonbar.append("l",  pDepthMarketData->LastPrice);
+        bsonbar.append("c", pDepthMarketData->LastPrice);
+        pCon->insert(database + ".bar", bsonbar.done());
+    }
+}
 void __stdcall DataServer::OnRspQryInstrument(void* pTraderApi, CThostFtdcInstrumentField *pInstrument, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
     if (pRspInfo->ErrorID)

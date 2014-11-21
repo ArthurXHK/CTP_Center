@@ -356,9 +356,9 @@ mxArray *DataCenter::GetInstrument(mxArray *inst)
     {
         b.append("ProductID", instrument);
         BSONObj qry = b.done();
-        cursor = pCon->query(string("MarketData.") + collection, qry);
+        cursor = pCon->query(database + ".instrument", qry);
         size = cursor->itcount();
-        cursor = pCon->query(string("MarketData.") + collection, qry);
+        cursor = pCon->query(database + ".instrument", qry);
     }
     
     mwSize dims[2] = {1, size};

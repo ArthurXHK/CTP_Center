@@ -3,7 +3,7 @@
 
 int main(int argc, char *argv[])
 {
-    string inifile = "E:\\workplace\\CTP_Center\\server.ini";
+    string inifile = "..\\server.ini";
     string field = "DataServer";
     // Èë¿ÚÅäÖÃ
     if (argc > 1)
