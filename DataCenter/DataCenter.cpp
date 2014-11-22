@@ -290,7 +290,6 @@ mxArray *DataCenter::GetBar(mxArray *inst, mxArray *tp, mxArray *start, mxArray 
     
     cursor = pCon->query(database + ".bar", qry);
     int size = cursor->itcount();
-    mexPrintf("%d\n", size);
     mwSize dims[2] = {1, size};
     result = mxCreateStructArray(2, dims, sizeof(field_names)/sizeof(*field_names), field_names);
     cursor = pCon->query(database + ".bar", qry);
@@ -322,7 +321,7 @@ mxArray *DataCenter::GetBar(mxArray *inst, mxArray *tp, mxArray *start, mxArray 
         mxSetField(result, i, "h", mxCreateDoubleScalar(p["h"].Double()));
         mxSetField(result, i, "l", mxCreateDoubleScalar(p["l"].Double()));
         mxSetField(result, i, "c", mxCreateDoubleScalar(p["c"].Double()));
-        mxSetField(result, i, "v", mxCreateDoubleScalar(p["v"].Double()));
+        mxSetField(result, i, "v", mxCreateDoubleScalar(p["v"].Int()));
         mxSetField(result, i, "i", mxCreateDoubleScalar(p["i"].Double()));
         ++i;
         
