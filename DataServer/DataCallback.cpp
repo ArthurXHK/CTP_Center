@@ -6,11 +6,12 @@
 void __stdcall DataServer::OnRtnDepthMarketData(void* pMdUserApi, CThostFtdcDepthMarketDataField *pDepthMarketData)
 {
     static const double INF = 1e+100;
-    if (hasData.count(pDepthMarketData->InstrumentID) != 0)
+    if (hasData.count(pDepthMarketData->InstrumentID) == 0)
     {
+        hasData.insert(pDepthMarketData->InstrumentID);
         return;
     }
-    hasData.insert(pDepthMarketData->InstrumentID);
+    
 
     BSONObjBuilder b;
     b.appendDate("UpdateTime", Date_t(GetEpochTime(pDepthMarketData->TradingDay, pDepthMarketData->UpdateTime, pDepthMarketData->UpdateMillisec)));
