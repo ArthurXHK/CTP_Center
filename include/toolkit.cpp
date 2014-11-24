@@ -3,40 +3,42 @@
 #include "toolkit.h"
 
 // 获取unix epoch时间
-time_t GetEpochTime(SYSTEMTIME st, string UpdateTime, int milisecond)
+time_t GetEpochTime(char *st, string UpdateTime, int milisecond)
 {
     struct tm t;
     time_t res;
-    t.tm_year = st.wYear - 1900;
-    t.tm_mon = st.wMonth - 1;
-    t.tm_mday = st.wDay;
+    sscanf(st, "%4d%2d%2d", &t.tm_year, &t.tm_mon, &t.tm_mday);
+    t.tm_year = t.tm_year - 1900;
+    t.tm_mon = t.tm_mon - 1;
+    t.tm_mday = t.tm_mday;
 
     sscanf(UpdateTime.c_str(), "%d:%d:%d", &t.tm_hour, &t.tm_min, &t.tm_sec);
     t.tm_isdst = -1;
     res = mktime(&t);
-    //如果是半夜则加一天时间
-    if (t.tm_hour >= 0 && t.tm_hour <= 3)
+    //如果是晚上半夜前则减一天时间
+    if (t.tm_hour >= 18 && t.tm_hour <= 24)
     {
-        res += 24 * 60 * 60;
+        res -= 24 * 60 * 60;
     }
     return res * 1000 + milisecond;
 }
 
-time_t GetBarTime(SYSTEMTIME st, string UpdateTime)
+time_t GetBarTime(char *st, string UpdateTime)
 {
     struct tm t;
     time_t res;
-    t.tm_year = st.wYear - 1900;
-    t.tm_mon = st.wMonth - 1;
-    t.tm_mday = st.wDay;
+    sscanf(st, "%4d%2d%2d", &t.tm_year, &t.tm_mon, &t.tm_mday);
+    t.tm_year = t.tm_year - 1900;
+    t.tm_mon = t.tm_mon - 1;
+    t.tm_mday = t.tm_mday;
     t.tm_sec = 0;
     sscanf(UpdateTime.c_str(), "%d:%d", &t.tm_hour, &t.tm_min);
     t.tm_isdst = -1;
     res = mktime(&t);
-    //如果是半夜则加一天时间
-    if (t.tm_hour >= 0 && t.tm_hour <= 3)
+    //如果是半夜前则减一天时间
+    if (t.tm_hour >= 18 && t.tm_hour <= 24)
     {
-        res += 24 * 60 * 60;
+        res -= 24 * 60 * 60;
     }
     return res * 1000;
 }

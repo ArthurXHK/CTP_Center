@@ -1,4 +1,4 @@
 MongoStart;
 m = Mongo('198.16.100.88');
-inst = m.distinct('MarketData.tick', 'InstrumentID');
+inst2 = m.distinct('MarketData.instrument', 'InstrumentID');
 

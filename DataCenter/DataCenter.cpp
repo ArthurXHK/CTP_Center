@@ -155,19 +155,49 @@ void DataCenter::RemoveTick(mxArray *inst ,mxArray *start, mxArray *end)
     pCon->remove(database + ".tick", b.done());
 }
 
-time_t DataCenter::GetEpochTime(struct tm &t, string UpdateTime, int milisecond)
+
+time_t DataCenter::GetEpochTime(char *st, string UpdateTime, int milisecond)
 {
+    if(NULL == st)
+        return 0;
+    struct tm t;
     time_t res;
+    sscanf(st, "%4d%2d%2d", &t.tm_year, &t.tm_mon, &t.tm_mday);
+    t.tm_year = t.tm_year - 1900;
+    t.tm_mon = t.tm_mon - 1;
+    t.tm_mday = t.tm_mday;
+
     sscanf(UpdateTime.c_str(), "%d:%d:%d", &t.tm_hour, &t.tm_min, &t.tm_sec);
     t.tm_isdst = -1;
     res = mktime(&t);
-    //晚上非半夜则减一天时间，保证时间连续
-    if (t.tm_hour >= 18 && t.tm_hour <=24)
+    //如果是晚上半夜前则减一天时间
+    if (t.tm_hour >= 18 && t.tm_hour <= 24)
     {
         res -= 24 * 60 * 60;
     }
-    
-    return res*1000 + milisecond;
+    return res * 1000 + milisecond;
+}
+
+time_t DataCenter::GetBarTime(char *st, string UpdateTime)
+{
+    if(NULL == st)
+        return 0;
+    struct tm t;
+    time_t res;
+    sscanf(st, "%4d%2d%2d", &t.tm_year, &t.tm_mon, &t.tm_mday);
+    t.tm_year = t.tm_year - 1900;
+    t.tm_mon = t.tm_mon - 1;
+    t.tm_mday = t.tm_mday;
+    t.tm_sec = 0;
+    sscanf(UpdateTime.c_str(), "%d:%d", &t.tm_hour, &t.tm_min);
+    t.tm_isdst = -1;
+    res = mktime(&t);
+    //如果是半夜前则减一天时间
+    if (t.tm_hour >= 18 && t.tm_hour <= 24)
+    {
+        res -= 24 * 60 * 60;
+    }
+    return res * 1000;
 }
 
 bool DataCenter::InsertTickByRawfile(mxArray *file)
@@ -180,31 +210,20 @@ bool DataCenter::InsertTickByRawfile(mxArray *file)
     }
     string sFile = mxArrayToString(file);
     mongo::HANDLE hFile = ::CreateFileA(sFile.c_str(), GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (hFile != ((mongo::HANDLE)(LONG_PTR)-1))
+
+    //mongo库HANDLE与windows冲突，暂时以此代替
+    if (hFile != ((mongo::HANDLE)(LONG_PTR)-1))//hFile != INVALID_HANDLE_VALUE
     {
         CThostFtdcDepthMarketDataFieldOld *pDepthMarketData = new CThostFtdcDepthMarketDataFieldOld;
         DWORD readsize = 0;
         int len = GetFileSize(hFile, NULL);
         len = len / sizeof(CThostFtdcDepthMarketDataFieldOld);
-        // 记录当前日期
-        struct tm t;
-        if(len > 0)
-        {
-            size_t pos = sFile.find("_");
-            string datestr = sFile.substr(pos + 1, 8);
-            int datenum = stoi(sFile.substr(pos + 1, 8));
-            
-            t.tm_year = datenum / 10000 - 1900;
-            datenum %= 10000;
-            t.tm_mon = datenum / 100 - 1;
-            t.tm_mday = datenum % 100;
-            
-        }
+        
         for (int i = 0; i < len; ++i)
         {
             bool ok = ReadFile(hFile, pDepthMarketData, sizeof(CThostFtdcDepthMarketDataFieldOld), &readsize, NULL);
             BSONObjBuilder b;
-            b.appendDate("UpdateTime", Date_t(GetEpochTime(t, pDepthMarketData->UpdateTime, pDepthMarketData->UpdateMillisec)));
+            b.appendDate("UpdateTime", Date_t(GetEpochTime(pDepthMarketData->TradingDay, pDepthMarketData->UpdateTime, pDepthMarketData->UpdateMillisec)));
             b.append("InstrumentID", pDepthMarketData->InstrumentID);
             b.append("OpenPrice", pDepthMarketData->OpenPrice > INF ? -1 : pDepthMarketData->OpenPrice);
             b.append("HighestPrice", pDepthMarketData->HighestPrice > INF ? -1 : pDepthMarketData->HighestPrice);
@@ -226,6 +245,7 @@ bool DataCenter::InsertTickByRawfile(mxArray *file)
             b.append("OpenInterest", pDepthMarketData->OpenInterest > INF ? -1 : pDepthMarketData->OpenInterest);
             b.append("SettlementPrice", pDepthMarketData->SettlementPrice > INF ? -1 : pDepthMarketData->SettlementPrice);
             pCon->insert(database + ".tick", b.done());
+            UpdateBar(pDepthMarketData);
         }
         CloseHandle(hFile);
         return true;
@@ -237,6 +257,47 @@ bool DataCenter::InsertTickByRawfile(mxArray *file)
     }
     CloseHandle(hFile);
     return true;
+}
+
+void DataCenter::UpdateBar(CThostFtdcDepthMarketDataFieldOld *pDepthMarketData)
+{
+    BSONObjBuilder b;
+    BSONObjBuilder timePeriod;
+    Date_t time = Date_t(GetBarTime(pDepthMarketData->TradingDay, pDepthMarketData->UpdateTime));
+    b.append("instrument", pDepthMarketData->InstrumentID);
+    b.append("type", 1);
+    timePeriod.appendDate("$gte", time - 1);
+    timePeriod.appendDate("$lte", time + 1);
+    b.append("time", timePeriod.done());
+    BSONObj qry = b.done();
+
+    auto_ptr<DBClientCursor> cursor;
+    cursor = pCon->query(database + ".bar", qry);
+    BSONObjBuilder bsonbar;
+    bsonbar.append("instrument", pDepthMarketData->InstrumentID);
+    bsonbar.append("time", time);
+    bsonbar.append("type", 1);
+    bsonbar.append("v", pDepthMarketData->Volume);
+    bsonbar.append("i", pDepthMarketData->OpenInterest);
+        
+    if (cursor->more())
+    {
+        BSONObj p = cursor->next();
+        bsonbar.append("o", p["o"].Double());
+        bsonbar.append("h", p["h"].Double() > pDepthMarketData->LastPrice ? p["h"].Double() : pDepthMarketData->LastPrice);
+        bsonbar.append("l", p["l"].Double() < pDepthMarketData->LastPrice ? p["l"].Double() : pDepthMarketData->LastPrice);
+        bsonbar.append("c", pDepthMarketData->LastPrice);
+        
+        pCon->update(database + ".bar", qry, bsonbar.done());
+    }
+    else
+    {
+        bsonbar.append("o", pDepthMarketData->LastPrice);
+        bsonbar.append("h", pDepthMarketData->LastPrice);
+        bsonbar.append("l",  pDepthMarketData->LastPrice);
+        bsonbar.append("c", pDepthMarketData->LastPrice);
+        pCon->insert(database + ".bar", bsonbar.done());
+    }
 }
 
 void DataCenter::InsertBar(mxArray *bar)

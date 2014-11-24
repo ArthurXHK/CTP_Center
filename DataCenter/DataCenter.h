@@ -46,8 +46,12 @@ private:
     }
     ~DataCenter(){}
     DataCenter& operator=(DataCenter const&){}
-    
-    time_t GetEpochTime(struct tm &t, string UpdateTime, int milisecond);
+    // 获取unix epoch时间
+    time_t GetEpochTime(char *st, string UpdateTime, int milisecond);
+    //获取1min时间
+    time_t GetBarTime(char *st, string UpdateTime);
+    //更新bar数据
+    void UpdateBar(CThostFtdcDepthMarketDataFieldOld *pDepthMarketData);
     static mongo::DBClientConnection *pCon; //数据库连接口
     static DBLog dblog;                             //日志
     static string serverIP;                          //服务器地址

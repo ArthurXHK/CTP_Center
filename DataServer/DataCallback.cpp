@@ -5,11 +5,15 @@
 //深度行情回报
 void __stdcall DataServer::OnRtnDepthMarketData(void* pMdUserApi, CThostFtdcDepthMarketDataField *pDepthMarketData)
 {
-
     static const double INF = 1e+100;
+    if (hasData.count(pDepthMarketData->InstrumentID) != 0)
+    {
+        return;
+    }
+    hasData.insert(pDepthMarketData->InstrumentID);
 
     BSONObjBuilder b;
-    b.appendDate("UpdateTime", Date_t(GetEpochTime(st, pDepthMarketData->UpdateTime, pDepthMarketData->UpdateMillisec)));
+    b.appendDate("UpdateTime", Date_t(GetEpochTime(pDepthMarketData->TradingDay, pDepthMarketData->UpdateTime, pDepthMarketData->UpdateMillisec)));
     b.append("InstrumentID", pDepthMarketData->InstrumentID);
     b.append("OpenPrice", pDepthMarketData->OpenPrice > INF ? -1 : pDepthMarketData->OpenPrice);
     b.append("HighestPrice", pDepthMarketData->HighestPrice > INF ? -1 : pDepthMarketData->HighestPrice);
@@ -39,7 +43,7 @@ void DataServer::UpdateBar(CThostFtdcDepthMarketDataField *pDepthMarketData)
 {
     BSONObjBuilder b;
     BSONObjBuilder timePeriod;
-    Date_t time = Date_t(GetBarTime(st, pDepthMarketData->UpdateTime));
+    Date_t time = Date_t(GetBarTime(pDepthMarketData->TradingDay, pDepthMarketData->UpdateTime));
     b.append("instrument", pDepthMarketData->InstrumentID);
     b.append("type", 1);
     timePeriod.appendDate("$gte", time - 1);

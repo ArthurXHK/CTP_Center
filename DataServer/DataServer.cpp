@@ -15,9 +15,9 @@ string DataServer::logpath; //日志路径
 string DataServer::database;
 string DataServer::mongoip;
 set<string> DataServer::insts;// 查询到的合约
+set<string> DataServer::hasData;//保存已经有数据的合约
 std::mutex DataServer::cs_instrument;
 mongo::HANDLE DataServer::h_instrumentGeted;
-SYSTEMTIME DataServer::st;
 
 bool DataServer::AllocMemory()
 {
@@ -112,7 +112,6 @@ DWORD WINAPI HeartBeatThread(LPVOID pM)
 
 mongo::HANDLE DataServer::StartHeartBeat()
 {
-    GetLocalTime(&st);
     return CreateThread(NULL, 0, HeartBeatThread, NULL, 0, NULL);
 }
 void DataServer::Release()
