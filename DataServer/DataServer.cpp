@@ -88,12 +88,19 @@ bool DataServer::ConnectMongodb()
 DWORD WINAPI HeartBeatThread(LPVOID pM)
 {
     DataServer::dblog->PrintLog("心跳线程已经启动");
+    static bool instQryed = false;
     while (1)
     {
         Sleep(1000 * 300 - 3);
         DataServer::dblog->PrintLog("发送程序心跳");
         SYSTEMTIME hbt;
         GetLocalTime(&hbt);
+        if (!instQryed && (hbt.wHour == 9 && hbt.wMinute > 15) || (hbt.wHour == 21 && hbt.wMinute > 0))
+        {
+            TD_ReqQryInstrument(DataServer::td, "");
+            instQryed = true;
+            DataServer::dblog->PrintLog("行情中更新合约完成");
+        }
         if (hbt.wHour == 15 && hbt.wMinute > 20)
         {
             DataServer::dblog->PrintLog("日盘行情已经结束");

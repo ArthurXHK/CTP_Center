@@ -13,6 +13,7 @@ time_t GetEpochTime(char *st, string UpdateTime, int milisecond)
     t.tm_mday = t.tm_mday;
 
     sscanf(UpdateTime.c_str(), "%d:%d:%d", &t.tm_hour, &t.tm_min, &t.tm_sec);
+
     t.tm_isdst = -1;
     res = mktime(&t);
     //如果是晚上半夜前则减一天时间
@@ -28,6 +29,7 @@ time_t GetBarTime(char *st, string UpdateTime)
     struct tm t;
     time_t res;
     sscanf(st, "%4d%2d%2d", &t.tm_year, &t.tm_mon, &t.tm_mday);
+    
     t.tm_year = t.tm_year - 1900;
     t.tm_mon = t.tm_mon - 1;
     t.tm_mday = t.tm_mday;

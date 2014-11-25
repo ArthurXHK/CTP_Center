@@ -11,8 +11,6 @@ void __stdcall DataServer::OnRtnDepthMarketData(void* pMdUserApi, CThostFtdcDept
         hasData.insert(pDepthMarketData->InstrumentID);
         return;
     }
-    
-
     BSONObjBuilder b;
     b.appendDate("UpdateTime", Date_t(GetEpochTime(pDepthMarketData->TradingDay, pDepthMarketData->UpdateTime, pDepthMarketData->UpdateMillisec)));
     b.append("InstrumentID", pDepthMarketData->InstrumentID);
@@ -121,13 +119,14 @@ void __stdcall DataServer::OnRspQryInstrument(void* pTraderApi, CThostFtdcInstru
     b.append("ShortMarginRatio", pInstrument->ShortMarginRatio);
     b.append("MaxMarginSideAlgorithm", pInstrument->MaxMarginSideAlgorithm);
     
-    if (cursor->itcount() == 0)
+    if (!cursor->more())
     {
         pCon->insert(database + ".instrument", b.done());
     }
     else
     {
-        pCon->update(database + ".instrument", QUERY("InstrumentID" << pInstrument->InstrumentID), b.done());
+        if (pInstrument->LongMarginRatio < 1)
+            pCon->update(database + ".instrument", QUERY("InstrumentID" << pInstrument->InstrumentID), b.done());
     }
 
 }
