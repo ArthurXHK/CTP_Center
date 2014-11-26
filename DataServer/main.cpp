@@ -33,6 +33,7 @@ int main(int argc, char *argv[])
 
     server.QryInstrument("");
     server.SubscribeAll();
+    server.QryInstrumentMarginRate('1');
     WaitForSingleObject(h_heartbeat, INFINITE);
     server.Release();
     return 0;

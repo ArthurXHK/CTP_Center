@@ -88,19 +88,12 @@ bool DataServer::ConnectMongodb()
 DWORD WINAPI HeartBeatThread(LPVOID pM)
 {
     DataServer::dblog->PrintLog("心跳线程已经启动");
-    static bool instQryed = false;
     while (1)
     {
         Sleep(1000 * 300 - 3);
         DataServer::dblog->PrintLog("发送程序心跳");
         SYSTEMTIME hbt;
         GetLocalTime(&hbt);
-        if (!instQryed && (hbt.wHour == 9 && hbt.wMinute > 15) || (hbt.wHour == 21 && hbt.wMinute > 0))
-        {
-            TD_ReqQryInstrument(DataServer::td, "");
-            instQryed = true;
-            DataServer::dblog->PrintLog("行情中更新合约完成");
-        }
         if (hbt.wHour == 15 && hbt.wMinute > 20)
         {
             DataServer::dblog->PrintLog("日盘行情已经结束");
@@ -152,6 +145,7 @@ void DataServer::CTP_RegAllCallback(void *tmsgQueue)
     CTP_RegOnRspQryInstrument(tmsgQueue, OnRspQryInstrument);
     CTP_RegOnRtnDepthMarketData(tmsgQueue, OnRtnDepthMarketData);
     CTP_RegOnRtnInstrumentStatus(tmsgQueue, OnRtnInstrumentStatus);
+    CTP_RegOnRspQryInstrumentMarginRate(tmsgQueue, OnRspQryInstrumentMarginRate);
 }
 
 
@@ -224,3 +218,18 @@ void DataServer::QryInstrument(const char* szInstrumentId)
     dblog->PrintLog("查询合约已发送");
 }
 
+void DataServer::QryInstrumentMarginRate(TThostFtdcHedgeFlagType HedgeFlag)
+{
+    set<string>::iterator iter;
+
+    for (iter = insts.begin(); iter != insts.end(); ++iter)
+    {
+        if ((*iter).size() < 8)
+        {
+            TD_ReqQryInstrumentMarginRate(td, iter->c_str(), HedgeFlag);
+        }
+        
+    }
+
+    dblog->PrintLog("查询合约保证金率已全部发送");
+}

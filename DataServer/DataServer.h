@@ -49,6 +49,8 @@ public:
     void Unsubscribe(const char* instruments);
     //订阅全部行情
     void SubscribeAll();
+    //查询保证金比例
+    void QryInstrumentMarginRate(TThostFtdcHedgeFlagType HedgeFlag);
     //运行心跳线程
     mongo::HANDLE StartHeartBeat();
 
@@ -75,7 +77,7 @@ private:
     static void __stdcall OnRtnDepthMarketData(void* pMdUserApi, CThostFtdcDepthMarketDataField *pDepthMarketData);
     //合约状态回报
     static void __stdcall OnRtnInstrumentStatus(void* pTraderApi, CThostFtdcInstrumentStatusField *pInstrumentStatus);
-    
+    static void __stdcall OnRspQryInstrumentMarginRate(void* pTraderApi, CThostFtdcInstrumentMarginRateField *pInstrumentMarginRate, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
 
 private:
     //隐藏默认构造

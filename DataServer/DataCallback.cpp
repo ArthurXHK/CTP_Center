@@ -115,18 +115,24 @@ void __stdcall DataServer::OnRspQryInstrument(void* pTraderApi, CThostFtdcInstru
     b.append("IsTrading", pInstrument->IsTrading);
     b.append("PositionType", pInstrument->PositionType);
     b.append("PositionDateType", pInstrument->PositionDateType);
-    b.append("LongMarginRatio", pInstrument->LongMarginRatio);
-    b.append("ShortMarginRatio", pInstrument->ShortMarginRatio);
     b.append("MaxMarginSideAlgorithm", pInstrument->MaxMarginSideAlgorithm);
-    
+    b.append("UnderlyingInstrID", pInstrument->UnderlyingInstrID);
+    b.append("StrikePrice", pInstrument->StrikePrice);
+    b.append("OptionsType", pInstrument->OptionsType);
+    b.append("UnderlyingMultiple", pInstrument->UnderlyingMultiple);
+    b.append("CombinationType", pInstrument->CombinationType);
+
     if (!cursor->more())
     {
+        b.append("LongMarginRatio", pInstrument->LongMarginRatio);
+        b.append("ShortMarginRatio", pInstrument->ShortMarginRatio);
         pCon->insert(database + ".instrument", b.done());
     }
     else
     {
-        if (pInstrument->LongMarginRatio < 1)
-            pCon->update(database + ".instrument", QUERY("InstrumentID" << pInstrument->InstrumentID), b.done());
+        BSONObjBuilder bb;
+        bb.append("$set", b.done());
+        pCon->update(database + ".instrument", QUERY("InstrumentID" << pInstrument->InstrumentID), bb.done());
     }
 
 }
@@ -156,3 +162,15 @@ void __stdcall DataServer::OnRtnInstrumentStatus(void* pTraderApi, CThostFtdcIns
 {
 
 }
+
+void __stdcall DataServer::OnRspQryInstrumentMarginRate(void* pTraderApi, CThostFtdcInstrumentMarginRateField *pInstrumentMarginRate, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
+{
+    if (pRspInfo->ErrorID)
+        dblog->PrintLog(GetPortMsg(pTraderApi) + ": " + pRspInfo->ErrorMsg, "error");
+    BSONObjBuilder b, bb;
+    b.append("LongMarginRatio", pInstrumentMarginRate->LongMarginRatioByMoney);
+    b.append("ShortMarginRatio", pInstrumentMarginRate->ShortMarginRatioByMoney);
+    bb.append("$set", b.done());
+    pCon->update(database + ".instrument", QUERY("InstrumentID" << pInstrumentMarginRate->InstrumentID), bb.done());
+}
+
