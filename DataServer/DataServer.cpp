@@ -116,6 +116,12 @@ mongo::HANDLE DataServer::StartHeartBeat()
 }
 void DataServer::Release()
 {
+    if (pCon)
+    {
+        delete pCon;
+        pCon = NULL;
+    }
+    
     TD_ReleaseTdApi(td);
     MD_ReleaseMdApi(md);
     CTP_ReleaseMsgQueue(md_msgQueue);
