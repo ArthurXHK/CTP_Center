@@ -6,5 +6,8 @@ for i = 2:length(tick)
         t = t + 1;
     end
 end
+if(t == 1)
+    ind = [];
+end
 end
 

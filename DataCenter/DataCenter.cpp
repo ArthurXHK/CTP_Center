@@ -77,7 +77,11 @@ mxArray *DataCenter::GetTick(mxArray *inst, mxArray *start, mxArray *end)
     string instrument = mxArrayToString(inst);
     double st = mxGetScalar(start);
     double et = mxGetScalar(end);
-    
+    if (et - st > 3)
+    {
+        PrintLog("查询范围太大: 请不要连续查询超过三天，用小范围查询拼接", "error");
+        return NULL;
+    }
     auto_ptr<DBClientCursor> cursor;
     BSONObjBuilder b;
     BSONObjBuilder timePeriod;
@@ -262,13 +266,13 @@ bool DataCenter::InsertTickByRawfile(mxArray *file)
 void DataCenter::UpdateBar(CThostFtdcDepthMarketDataFieldOld *pDepthMarketData)
 {
     BSONObjBuilder b;
-    BSONObjBuilder timePeriod;
+//     BSONObjBuilder timePeriod;
     Date_t time = Date_t(GetBarTime(pDepthMarketData->TradingDay, pDepthMarketData->UpdateTime));
     b.append("instrument", pDepthMarketData->InstrumentID);
     b.append("type", 1);
-    timePeriod.appendDate("$gte", time - 1);
-    timePeriod.appendDate("$lte", time + 1);
-    b.append("time", timePeriod.done());
+//     timePeriod.appendDate("$gte", time - 1);
+//     timePeriod.appendDate("$lte", time + 1);
+    b.append("time", time);
     BSONObj qry = b.done();
 
     auto_ptr<DBClientCursor> cursor;

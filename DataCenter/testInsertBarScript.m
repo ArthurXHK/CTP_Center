@@ -1,19 +1,18 @@
-connectdb('198.16.100.88', 'MarketData');
+connectdb('198.16.100.11', 'MarketData');
 
-
-instrument = inst3;
-
-for date = datenum(2014, 11, 21) : datenum(2014, 11, 21)
-    for i = 1:length(instrument)
-        inst = instrument{i};
-        disp([datestr(date), instrument]);
-        tick = GetTick(inst, date - datenum(0, 0, 0, 4, 0, 0, 0), date + datenum(0, 0, 0, 16, 0, 0));
+rawdir = dir('E:\rawdata');
+rawdir = {rawdir.name}';
+for i = 3:length(rawdir)
+    filedir = fullfile('E:\rawdata', rawdir{i});
+    file = dir(filedir);
+    file = {file.name}';
+    for j = 3:length(file)
+        File = fullfile(filedir, file{j});
         
-        bar = Syn1min(inst, tick);
-        InsertBar(bar);
+        disp(File);
+        InsertTickByRaw(File);
+        
     end
-    
 end
-
 
 disconnectdb;

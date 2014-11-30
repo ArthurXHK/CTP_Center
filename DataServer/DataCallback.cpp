@@ -41,13 +41,10 @@ void __stdcall DataServer::OnRtnDepthMarketData(void* pMdUserApi, CThostFtdcDept
 void DataServer::UpdateBar(CThostFtdcDepthMarketDataField *pDepthMarketData)
 {
     BSONObjBuilder b;
-    BSONObjBuilder timePeriod;
     Date_t time = Date_t(GetBarTime(pDepthMarketData->TradingDay, pDepthMarketData->UpdateTime));
     b.append("instrument", pDepthMarketData->InstrumentID);
     b.append("type", 1);
-    timePeriod.appendDate("$gte", time - 1);
-    timePeriod.appendDate("$lte", time + 1);
-    b.append("time", timePeriod.done());
+    b.append("time", time);
     BSONObj qry = b.done();
 
     auto_ptr<DBClientCursor> cursor;
