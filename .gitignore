@@ -57,3 +57,6 @@ include/boost/*
 *test.m
 *.raw
 *.mat
+*.project
+*.pydevproject
+*.vcxproj.user

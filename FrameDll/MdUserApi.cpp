@@ -28,8 +28,8 @@ CMdUserApi::~CMdUserApi(void)
 //jebin: 触发已经连接
 void CMdUserApi::SetConnected()
 {
-    SetEvent(h_connected);
     isconnected = true;
+    SetEvent(h_connected);
 }
 bool CMdUserApi::WaitForConnected()
 {
