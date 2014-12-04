@@ -60,3 +60,4 @@ include/boost/*
 *.project
 *.pydevproject
 *.vcxproj.user
+*.settings
