@@ -1,14 +1,14 @@
 # -*- coding=utf-8 -*-
 
 from ctypes import *
-import CTPStruct
+from CTPUserApiStruct import *
 from time import sleep
 
 MdDll = WinDLL('..\\lib\\thostmduserapi.dll')
 TdDll = WinDLL('..\\lib\\thosttraderapi.dll')
 FrameDll = WinDLL('..\\lib\\FrameDll.dll')
 
-MARKETDATAFUN = WINFUNCTYPE(None, c_void_p, POINTER(CTPStruct.CThostFtdcDepthMarketDataField))
+MARKETDATAFUN = WINFUNCTYPE(None, c_void_p, POINTER(CThostFtdcDepthMarketDataField))
 
 def OnRtnMarketData(pMd, data):
     print data.contents.InstrumentID

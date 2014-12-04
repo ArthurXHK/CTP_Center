@@ -1,4 +1,5 @@
 import re
+
 f = open("..\\include\\ThostFtdcUserApiDataType.h")
 
 out = open(".\\CTPApiDataType.py", 'a')
@@ -31,3 +32,27 @@ while line:
 f.close()
 out.close()
 
+f = open('..\\include\\ThostFtdcUserApiStruct.h')
+out = open(".\\CTPUserApiStruct.py", 'a')
+out.write('from CTPApiDataType import *\n')
+
+line = f.readline()
+
+while line:
+    #print line
+    structGroup = re.search('struct( +|\t+)(\w+)', line)
+    if structGroup != None:
+        print structGroup.group(2)
+        out.write('class ' + structGroup.group(2) + '(Structure):\n' + ' '*4 + '_fields_ = [\n')
+        line = f.readline()
+        line = f.readline()
+        isOverGroup = re.search('}', line);
+        while isOverGroup == None:
+            memberGroup = re.search('(\w+)( +|\t+)(\w+)', line)
+            if memberGroup != None:
+                print memberGroup.group(1), memberGroup.group(3)
+                out.write(' '*11 + '(\'' + memberGroup.group(3) + '\', ' + memberGroup.group(1) + '),\n')
+            line = f.readline()
+            isOverGroup = re.search('}', line);
+        out.write(' '*11 + ']\n')
+    line = f.readline()
