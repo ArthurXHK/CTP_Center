@@ -1,4 +1,7 @@
 from ctypes import *
+THOST_TERT_RESTART = 0
+THOST_TERT_RESUME = 1
+THOST_TERT_QUICK = 2
 TThostFtdcTraderIDType = c_char * 21
 TThostFtdcInvestorIDType = c_char * 13
 TThostFtdcBrokerIDType = c_char * 11

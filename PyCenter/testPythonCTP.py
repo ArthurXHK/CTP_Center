@@ -1,7 +1,8 @@
-# -*- coding=utf-8 -*-
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
-from ctypes import *
 from CTPUserApiStruct import *
+from ctypes import *
 from time import sleep
 
 MdDll = WinDLL('..\\lib\\thostmduserapi.dll')
