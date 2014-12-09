@@ -3,6 +3,7 @@ from CTPUserApiStruct import *
 from ctypes import *
 from CallBackDecorater import *
 import ConfigParser
+import threading
 from eventlet import sleep
 
 __author__ = 'jebin'
@@ -36,17 +37,19 @@ class MarketDataCenter(object):
         self.__logpath = config.get(section, 'logpath')
         self.__mongoip = config.get(section, 'mongoip')
         self.__database = config.get(section, 'database')
-        self.__md = FrameDll.MD_CreateMdApi();
-        self.__td = FrameDll.TD_CreateTdApi();
+        self.__md = FrameDll.MD_CreateMdApi()
+        self.__td = FrameDll.TD_CreateTdApi()
         self.__msgQueue = FrameDll.CTP_CreateMsgQueue()
         FrameDll.MD_RegMsgQueue2MdApi(self.__md, self.__msgQueue)
         FrameDll.TD_RegMsgQueue2TdApi(self.__td, self.__msgQueue)
-        FrameDll.CTP_StartMsgQueue(self.__msgQueue);
+        FrameDll.CTP_StartMsgQueue(self.__msgQueue)
         self.__RegisterCallback()
+        self.__lock = threading.Event()
+        
     def __RegisterCallback(self):
-        self.__pOnRtnMarketData = OnRtnMarketDataDec(OnRtnMarketData)
+        self.__pOnRtnMarketData = fnOnRtnMarketDataDec(OnRtnMarketData)
         FrameDll.CTP_RegOnRtnDepthMarketData(self.__msgQueue, self.__pOnRtnMarketData)
-        self.__pOnRspQryInstrument = OnRspQryInstrumentDec(OnRspQryInstrument)
+        self.__pOnRspQryInstrument = fnOnRspQryInstrumentDec(OnRspQryInstrument)
         FrameDll.CTP_RegOnRspQryInstrument(self.__msgQueue, self.__pOnRspQryInstrument)
     
     
@@ -70,8 +73,8 @@ class MarketDataCenter(object):
         else: return False
         if 1 == FrameDll.TD_WaitForConnected(self.__td): print 'td is connected'
         else: return False
-        
         return True
+    
     def QryInstrument(self, instruments):
         FrameDll.TD_ReqQryInstrument(self.__td, instruments)
     
