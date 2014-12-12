@@ -1,28 +1,16 @@
 # -*- coding: UTF-8 -*-
 from ctypes import *
 from CTPUserApiStruct import *
-import threading
-
-
-InstrumentList = []
-InstrumentAllGetedEvent = threading.Event()
-DataDict = {}
-
 
 #行情回报
 fnOnRtnMarketDataDec = WINFUNCTYPE(None, c_void_p, POINTER(CThostFtdcDepthMarketDataField))
 def OnRtnMarketData(pMdUserApi, pDepthMarketData):
-    
-    print pDepthMarketData.contents.InstrumentID
-    print pDepthMarketData.contents.LastPrice
+    pass
 
 #查询合约回报
 fnOnRspQryInstrumentDec = WINFUNCTYPE(None, c_void_p, POINTER(CThostFtdcInstrumentField), POINTER(CThostFtdcRspInfoField), c_int, c_bool)
 def OnRspQryInstrument(pTraderApi, pInstrument, pRspInfo, nRequestID, bIsLast):
-    print pInstrument.contents.InstrumentID
-    InstrumentList.append(pInstrument.contents.InstrumentID)
-    if bIsLast:
-        InstrumentAllGetedEvent.set()
+    pass
 
 #连接回报
 fnOnConnectDec = WINFUNCTYPE(None, c_void_p, POINTER(CThostFtdcRspUserLoginField), c_int)
