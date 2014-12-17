@@ -38,7 +38,7 @@ def OnRspOrderAction(pTraderApi, pInputOrderAction, pRspInfo, nRequestID, bIsLas
     pass
 
 fnOnRspOrderInsertDec = WINFUNCTYPE(None, c_void_p, POINTER(CThostFtdcInputOrderField), POINTER(CThostFtdcRspInfoField), c_int, c_bool)
-def fnOnRspOrderInsert(pTraderApi, pInputOrder, pRspInfo, nRequestID, bIsLast):
+def OnRspOrderInsert(pTraderApi, pInputOrder, pRspInfo, nRequestID, bIsLast):
     pass
 
 fnOnRspQryDepthMarketDataDec = WINFUNCTYPE(None, c_void_p, POINTER(CThostFtdcDepthMarketDataField), POINTER(CThostFtdcRspInfoField), c_int, c_bool)
@@ -50,7 +50,7 @@ def OnRspQryDepthMarketData(pTraderApi, pDepthMarketData, pRspInfo, nRequestID, 
 fnOnRspQryInstrumentCommissionRateDec = WINFUNCTYPE(None, c_void_p, POINTER(CThostFtdcInstrumentCommissionRateField), POINTER(CThostFtdcRspInfoField), c_int, c_bool)
 def OnRspQryInstrumentCommissionRate(pTraderApi, pInstrumentCommissionRate, pRspInfo, nRequestID, bIsLast):
     pass
-#start 
+
 
 fnOnRspQryInstrumentMarginRateDec = WINFUNCTYPE(None, c_void_p, POINTER(CThostFtdcInstrumentMarginRateField), POINTER(CThostFtdcRspInfoField), c_int, c_bool)
 def OnRspQryInstrumentMarginRate(pTraderApi, pInstrumentMarginRate, pRspInfo, nRequestID, bIsLast):

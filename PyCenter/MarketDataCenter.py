@@ -5,36 +5,42 @@ from ctypes import *
 from CallBackDecorater import *
 import ConfigParser
 from eventlet import sleep
-from multiprocessing import Process
 import logging
-import multiprocessing
-
+import copy
+import threading
 __author__ = 'jebin'
-
 
 MdDll = WinDLL('..\\lib\\thostmduserapi.dll')
 TdDll = WinDLL('..\\lib\\thosttraderapi.dll')
 FrameDll = WinDLL('..\\lib\\FrameDll.dll')
 
+MarketData = {}
 InstrumentList = []
-InstrumentAllGetedEvent = multiprocessing.Event()
-MainOverEvent = multiprocessing.Event()
-
+InstrumentAllGetedEvent = threading.Event()
+MainOverEvent = threading.Event()
+MarketEvent = {}
+MarketEventLock = threading.Lock()
 def OnConnect(pApi, pRspUserLogin, result):
-    print '%x now: %d' % (pApi, result)
-    sys.stdout.flush()
+    print 'state of %x is %d' % (pApi, result)
 def OnDisconnect(pApi, pRspInfo, step):
-    print '%x now: %d' % (pApi, step)
-    sys.stdout.flush()
+    print 'state of %x is %d' % (pApi, step)
 
 def OnRtnMarketData(pMdUserApi, pDepthMarketData):
-    print pDepthMarketData.contents.LastPrice
-    sys.stdout.flush()
+    MarketData[pDepthMarketData.contents.InstrumentID] = copy.deepcopy(pDepthMarketData.contents)
+    with MarketEventLock:
+        for i in MarketEvent[pDepthMarketData.contents.InstrumentID]:
+            i.set()
+            
 def OnRspQryInstrument(pTraderApi, pInstrument, pRspInfo, nRequestID, bIsLast):
     InstrumentList.append(pInstrument.contents.InstrumentID)
+    MarketEvent[pInstrument.contents.InstrumentID] = []
     if bIsLast:
         InstrumentAllGetedEvent.set()
-        
+
+def RegisterStrategy(instrument, strategyevent):
+    with MarketEventLock:
+        MarketEvent[instrument].append(strategyevent)
+ 
 class MarketDataCenter(object):
     '''行情回报中心'''
     def __str__(self):
@@ -75,10 +81,12 @@ class MarketDataCenter(object):
         self.__logger.addHandler(ch)
         self.__RegisterCallback()
         self.__logger.info('init finished')
+        
     def Release(self):
         FrameDll.TD_ReleaseTdApi(self.__td);
         FrameDll.MD_ReleaseMdApi(self.__md);
-        FrameDll.CTP_ReleaseMsgQueue(self.__msgQueue);
+        FrameDll.CTP_ReleaseMsgQueue(self.__msgQueue)
+        
     def __RegisterCallback(self):
         self.__pOnRtnMarketData = fnOnRtnMarketDataDec(OnRtnMarketData)
         FrameDll.CTP_RegOnRtnDepthMarketData(self.__msgQueue, self.__pOnRtnMarketData)
@@ -136,29 +144,34 @@ class MarketDataCenter(object):
             self.__logger.info('connect success')
             self.QryInstrument('')
             self.__logger.info('qryinstrument finish')
-            #self.SubscribeAll()
-            self.Subscribe('IF1412')
+            self.SubscribeAll()
+            #self.Subscribe('ag1501')
             self.__logger.info('subscribeall finish')
 
 def main():
+
+    
     center = MarketDataCenter()
     center.run()
     MainOverEvent.wait()
     center.Release()
     print 'main over'
-    sys.stdout.flush()
+
     
 if __name__ == '__main__':
-    process = Process(target=main, args=tuple())
     
+    thread = threading.Thread(None, target=main)
     while True:
         msg = raw_input('input: ')
         if msg == 'stop':
             MainOverEvent.set()
-            sleep(10)
+            thread.join()
             break
         elif msg == 'start':
-            process.start()
+            thread.start()
         else:
-            print 'no operation'
+            if msg in MarketData:
+                print MarketData[msg].LastPrice
+            else:
+                print 'no inst'
             
