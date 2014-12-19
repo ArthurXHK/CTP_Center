@@ -1,4 +1,4 @@
-# coding: UTF-8
+# -*- coding: UTF-8 -*-
 import sys
 from CTPUserApiStruct import *
 from ctypes import *
@@ -18,17 +18,20 @@ __author__ = 'jebin'
 Orders = {}
 
 def OnConnect(pApi, pRspUserLogin, result):
-    print 'state of %x is %d' % (pApi, result)
+    print 'User %x status: %d' % (pApi, result)
 def OnDisconnect(pApi, pRspInfo, step):
-    print 'state of %x is %d' % (pApi, step)
+    print 'User %x status: %d' % (pApi, step)
 
 def OnRspError(pApi, pRspInfo, nRequestID, bIsLast):
     pass
 def OnRspOrderInsert(pTraderApi, pInputOrder, pRspInfo, nRequestID, bIsLast):
-    print 'Insert %s' % pInputOrder.contents.OrderRef
-    print pRspInfo.contents.ErrorMsg
+    print 'User %x insert order %s' % (pTraderApi, pInputOrder.contents.OrderRef)
+    
 def OnRspOrderAction(pTraderApi, pInputOrderAction, pRspInfo, nRequestID, bIsLast):
-    print 'Cancel %s' % pInputOrderAction.contents.OrderRef
+    if pRspInfo.contents.ErrorID == 0:
+        print 'User %x cancel order %s' % (pTraderApi, pInputOrderAction.contents.OrderRef)
+    else:
+        print pRspInfo.contents.ErrorMsg.encode('utf-8')
 def OnRspQryInstrumentCommissionRate(pTraderApi, pInstrumentCommissionRate, pRspInfo, nRequestID, bIsLast):
     pass
 def OnRspQryInvestorPosition(pTraderApi, pInvestorPosition, pRspInfo, nRequestID, bIsLast):
@@ -46,7 +49,7 @@ def OnRspQryTradingAccount(pTraderApi, pTradingAccount, pRspInfo, nRequestID, bI
 
 def OnRtnOrder(pTraderApi, pOrder):
     Orders[int(pOrder.contents.OrderRef)] = copy.deepcopy(pOrder.contents)
-    print 'Order %s status %s' % (pOrder.contents.OrderRef, pOrder.contents.OrderStatus)
+    print 'User %x \'s order %s status %s' % (pTraderApi, pOrder.contents.OrderRef, pOrder.contents.OrderStatus)
     
 def OnRtnTrade(pTraderApi, pTrade):
     pass
@@ -105,6 +108,7 @@ class Trader(object):
         FrameDll.CTP_RegOnRtnOrder(self.__msgQueue, self.__pOnRtnOrder)
         self.__pOnRtnTrade = fnOnRtnTradeDec(OnRtnTrade)
         FrameDll.CTP_RegOnRtnTrade(self.__msgQueue, self.__pOnRtnTrade)
+        
     def Connect(self):
         FrameDll.MD_Connect(self.__md,
                             self.__streampath, 
@@ -135,7 +139,6 @@ class Trader(object):
         FrameDll.CTP_ReleaseMsgQueue(self.__msgQueue)
         
     def SendOrder(self, instrument, direction, OffsetFlag, volume, price):
-        print instrument, direction, OffsetFlag, volume, price
         FrameDll.TD_SendOrder(self.__td, -1, instrument, '', 
                               c_char(direction), 
                               OffsetFlag, '1', c_int(volume), 
@@ -151,12 +154,7 @@ class Trader(object):
             FrameDll.TD_CancelOrder(self.__td, byref(Orders[orderref]))
         else:
             self.__logger.warn('orderref %d not found' % orderref)
-    def run(self):
-        while True:
-            self.__strategyfun()
-    
-    def RegisterStrategyFun(self, fun):
-        self.__strategyfun = fun
+
 
 def main():
     trader = Trader()
@@ -166,7 +164,7 @@ def main():
     while True:
         msg = raw_input()
         if msg == 'get':
-            trader.SendOrder('IF1412', '0', '0', 2, 3334)
+            trader.SendOrder('IF1412', '0', '0', 2, 3390)
         elif msg == 'cancel':
             trader.CancelOrder(1)
         elif msg == 'end':
