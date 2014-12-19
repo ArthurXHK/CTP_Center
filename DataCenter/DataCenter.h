@@ -37,6 +37,7 @@ public:
     void InsertBar(mxArray *bar);
     mxArray *GetBar(mxArray *inst, mxArray *tp, mxArray *start, mxArray *end);
     mxArray *GetInstrument(mxArray *inst);
+    mxArray *GetPositionRank(mxArray *date, mxArray *inst, mxArray *type);
 private:
     DataCenter()
     {

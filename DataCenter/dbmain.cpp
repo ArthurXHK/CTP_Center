@@ -56,6 +56,13 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, mxArray *prhs[])
             plhs[0] = DCenter.GetInstrument(prhs[1]);
             break;
         }
+        case 9: 
+        {
+            // time instrument type 
+            plhs[0] = DCenter.GetPositionRank(prhs[1], prhs[2], prhs[3]);
+            break;
+            
+        }
         default:
             mexPrintf("Î´ÕÒµ½²Ù×÷\n");
             break;

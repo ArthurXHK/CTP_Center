@@ -456,3 +456,55 @@ mxArray *DataCenter::GetInstrument(mxArray *inst)
     }
     return result;
 }
+
+mxArray *DataCenter::GetPositionRank(mxArray *date, mxArray *inst, mxArray *type)
+{
+    mxArray *result;
+    const char *field_names[] = {"date", "user", "instrument", "type", "rank", "value", "diff"};
+    
+    int st = mxGetScalar(date);
+    string ins = mxArrayToString(inst);
+    string tp = mxArrayToString(type);
+    
+    BSONObjBuilder b;
+    auto_ptr<DBClientCursor> cursor;
+    
+    b.appendDate("date", ( (st - 719529) * 24LL)* 60LL * 60LL * 1000LL);
+    if (ins.size() > 0)
+        b.append("instrument", ins);
+    if(tp.size() > 0)
+        b.append("type", tp);
+    BSONObj qry = b.done();
+    
+    cursor = pCon->query(database + ".PositionRank", qry);
+    
+    int size = cursor->itcount();
+    mwSize dims[2] = {1, size};
+    result = mxCreateStructArray(2, dims, sizeof(field_names)/sizeof(*field_names), field_names);
+    cursor = pCon->query(database + ".PositionRank", qry);
+    int i = 0;
+    BSONObj p;
+    while(cursor->more())
+    {
+        p = cursor->next();
+        
+        tm buf;
+        
+        Date_t pkTime = Date_t(p["date"].Date().millis + 8 * 3600000LL);
+        double time = pkTime.millis%1000 / 100 / 100000.0;
+        pkTime.toTm(&buf);
+        int day = (buf.tm_year + 1900) * 10000 + (buf.tm_mon + 1) * 100 + buf.tm_mday;
+        time = time + buf.tm_hour + buf.tm_min / 100.0 + buf.tm_sec / 10000.0;
+        
+        mxSetField(result, i, "date", mxCreateDoubleScalar(day));
+        mxSetField(result, i, "instrument", mxCreateString(p["instrument"].String().c_str()));
+        mxSetField(result, i, "user", mxCreateString(p["user"].String().c_str()));
+        mxSetField(result, i, "type", mxCreateString(p["type"].String().c_str()));
+        mxSetField(result, i, "value", mxCreateDoubleScalar(p["value"].Int()));
+        mxSetField(result, i, "rank", mxCreateDoubleScalar(p["rank"].Int()));
+        mxSetField(result, i, "diff", mxCreateDoubleScalar(p["diff"].Int()));
+        ++i;
+    }
+    return result;
+    
+}
