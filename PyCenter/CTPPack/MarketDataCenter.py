@@ -1,5 +1,6 @@
 # -*- coding: UTF-8 -*-
 import sys
+import os
 from CTPUserApiStruct import *
 from ctypes import *
 from CallBackDecorater import *
@@ -8,11 +9,14 @@ from eventlet import sleep
 import logging
 import copy
 import threading
+dirname = os.path.dirname
 __author__ = 'jebin'
-
-MdDll = WinDLL('..\\lib\\thostmduserapi.dll')
-TdDll = WinDLL('..\\lib\\thosttraderapi.dll')
-FrameDll = WinDLL('..\\lib\\FrameDll.dll')
+curpath = dirname(os.path.abspath(__file__))
+pypath = dirname(curpath)
+ctppath = dirname(pypath)
+MdDll = WinDLL(ctppath + '\\lib\\thostmduserapi.dll')
+TdDll = WinDLL(ctppath + '\\lib\\thosttraderapi.dll')
+FrameDll = WinDLL(ctppath + '\\lib\\FrameDll.dll')
 
 MarketData = {}
 InstrumentList = []
@@ -51,7 +55,7 @@ class MarketDataCenter(object):
         return res
     __repr__ = __str__
     
-    def __init__(self, inifile = '../server.ini', section = 'SimServer'):
+    def __init__(self, inifile = ctppath + '\\server.ini', section = 'SimServer'):
         self.__inifile = inifile
         self.__section = section
         config = ConfigParser.ConfigParser()
@@ -117,11 +121,9 @@ class MarketDataCenter(object):
                             '', '')
         if 1 == FrameDll.MD_WaitForConnected(self.__md): 
             print 'md is connected' 
-            sys.stdout.flush()
         else: return False
         if 1 == FrameDll.TD_WaitForConnected(self.__td): 
             print 'td is connected'
-            sys.stdout.flush()
         else: return False
         return True
     

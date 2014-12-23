@@ -9,8 +9,7 @@ import logging
 import copy
 import threading
 
-from MarketDataCenter import MdDll, TdDll, FrameDll
-
+from MarketDataCenter import MdDll, TdDll, FrameDll, ctppath
 __author__ = 'jebin'
 
 
@@ -56,7 +55,7 @@ def OnRtnTrade(pTraderApi, pTrade):
 
 class Trader(object):
     
-    def __init__(self, inifile = '../server.ini', section = 'SimServer'):
+    def __init__(self, inifile = ctppath + '\\server.ini', section = 'SimServer'):
         self.__inifile = inifile
         self.__section = section
         config = ConfigParser.ConfigParser()
