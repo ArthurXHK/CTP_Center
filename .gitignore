@@ -43,6 +43,7 @@ Network Trash Folder
 Temporary Items
 .apdisk
 
+# My Ignore
 server.ini
 *.con
 *.pdb
@@ -61,3 +62,4 @@ include/boost/*
 *.pydevproject
 *.vcxproj.user
 *.settings
+*.pyc
