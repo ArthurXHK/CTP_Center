@@ -40,11 +40,7 @@ def OnRspQryInstrument(pTraderApi, pInstrument, pRspInfo, nRequestID, bIsLast):
     MarketEvent[pInstrument.contents.InstrumentID] = []
     if bIsLast:
         InstrumentAllGetedEvent.set()
-
-def RegisterStrategy(instrument, strategyevent):
-    with MarketEventLock:
-        MarketEvent[instrument].append(strategyevent)
- 
+    
 class MarketDataCenter(object):
     '''行情回报中心'''
     def __str__(self):
@@ -139,16 +135,12 @@ class MarketDataCenter(object):
         else:
             self.__logger.error('Subscribeall error')
     def run(self):
-        while self.Connect() == False:
-            self.__logger.error('connect error')
-            
-        else:
-            self.__logger.info('connect success')
-            self.QryInstrument('')
-            self.__logger.info('qryinstrument finish')
-            self.SubscribeAll()
-            #self.Subscribe('ag1501')
-            self.__logger.info('subscribeall finish')
+        self.__logger.info('connect success')
+        self.QryInstrument('')
+        self.__logger.info('qryinstrument finish')
+        self.SubscribeAll()
+        #self.Subscribe('ag1501')
+        self.__logger.info('subscribeall finish')
 
 def main():
 
