@@ -15,6 +15,7 @@ __author__ = 'jebin'
 
 
 Orders = {}
+OrderLock = threading.Lock()
 
 def OnConnect(pApi, pRspUserLogin, result):
     print 'User %x status: %d' % (pApi, result)
@@ -47,8 +48,9 @@ def OnRspQryTradingAccount(pTraderApi, pTradingAccount, pRspInfo, nRequestID, bI
     pass
 
 def OnRtnOrder(pTraderApi, pOrder):
-    Orders[int(pOrder.contents.OrderRef)] = copy.deepcopy(pOrder.contents)
-    print 'User %x \'s order %s status %s' % (pTraderApi, pOrder.contents.OrderRef, pOrder.contents.OrderStatus)
+    with OrderLock:
+        Orders[int(pOrder.contents.OrderRef)] = copy.deepcopy(pOrder.contents)
+        print 'User %x \'s order %s status %s' % (pTraderApi, pOrder.contents.OrderRef, pOrder.contents.OrderStatus)
     
 def OnRtnTrade(pTraderApi, pTrade):
     pass

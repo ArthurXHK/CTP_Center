@@ -61,3 +61,22 @@ for folder in folders:
             line = filedata.readline()
 '''
 
+#shfevol
+filename = 'E:/workplace/positionPro/data/20060913shfevol.html'
+filedata = open('E:/workplace/positionPro/data/20060913shfevol.html')
+
+filecode = filedata.read()
+
+data = re.findall('<(TD|STRONG).*?>\s*([^\s<>]*)\s*</(TD|STRONG)?\s*>', filecode)
+pinz = ''
+for i in data:
+    strdata = i[1].encode('utf-8')
+    res = re.search('[a-zA-Z]{1,3}\d{3,4}', strdata)
+    if res != None:
+        pinz =  res.group(0)
+    print strdata
+dateGroup = re.search('\d+', filename)
+date = dateGroup.group(0)
+date = datetime(int(date[0:4]), int(date[4:6]), int(date[6:8]))
+print date
+filedata.close()

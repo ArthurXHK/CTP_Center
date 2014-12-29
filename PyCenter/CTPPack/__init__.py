@@ -1,4 +1,4 @@
-
+# -*- coding=UTF-8 -*-
 
 import MarketDataCenter
 import Trader
@@ -16,6 +16,10 @@ HangupStrategy = StrategyCenter.HangupStrategy
 StopStrategy = StrategyCenter.HangupStrategy
 
 listOfThread = StrategyCenter.listOfThread
+listOfEvent = StrategyCenter.listOfEvent
+listOfEventLock = StrategyCenter.listOfEventLock
+
+
 
 def Connect():
     global trader, market
@@ -28,39 +32,79 @@ def Release():
     trader.Release()
     market.Release()
 
+#行情线程
 def MarketThread():
     market.run()
     MainOverEvent.wait()
     MainOverEvent.clear()
     Release()
+marketthread = threading.Thread(None, target=MarketThread)
 
-def StartStrategy(strategyname):
-    strategy = getattr(StrategyCenter, strategyname)
-    strategythread = threading.Thread(None, target=strategy)
-    listOfThread[strategyname] = strategythread
-    strategythread.start()
+#启动策略
+def StartStrategy(instrument, strategyname):
+    #判断策略是否已加入
+    if strategyname in listOfEvent:
+        print strategyname, 'is exist'
+    else:
+        strategyfun = getattr(StrategyCenter, strategyname)#get strategy function, maybe modify later
+        strategyevent = threading.Event()
+        RegisterStrategy(instrument, strategyevent)
+        with listOfEventLock:
+            listOfEvent[strategyname] = (instrument, strategyevent)
+        strategythread = threading.Thread(None, target=strategyfun)
+        #listOfThread[strategyname] = strategythread
+        strategythread.start()
+    
+#恢复运行策略
+def ResumeStrategy(strategyname):
+    if strategyname not in listOfEvent:
+        print strategyname, 'not exist'
+    instrument, strategyevent = listOfEvent[strategyname]
+    RegisterStrategy(instrument, strategyevent)
+        
+#启动行情
+def StartMarket():
+    
+    if not marketthread.is_alive():
+        Connect()
+        
+        marketthread.start()
+    else: print 'Market is alive'
+    
+#停止行情
+def StopMarket():
+    MainOverEvent.set()
+
+
+def SendOrder(instrument, direction, OffsetFlag, volume, price):
+    trader.SendOrder(instrument, direction, OffsetFlag, volume, price)
+
+def CancelOrder(orderref):
+    trader.CancelOrder(orderref)
     
     
 def main():
-    global marketthread
-    Connect()
-    marketthread = threading.Thread(None, target=MarketThread)
+    
+    StartMarket()
     while True:
         msg = raw_input('input: ')
         if msg == 'start':
-            marketthread.start()
+            StartMarket()
         elif msg == 'stop':
-            MainOverEvent.set()
+            StopMarket()
             break
         elif msg == 'import1':
-            StartStrategy('testStrategy')
+            StartStrategy('IF1501', 'testStrategy')
         elif msg == 'import2':
-            StartStrategy('testStrategy2')
-        elif msg == 'hangup':
-            for i,j in StrategyCenter.listOfEvent:
-                HangupStrategy(i, j)
-        elif msg == 'stopstra':
-            StopStrategy('testStrategy')
+            StartStrategy('IF1502', 'testStrategy2')
+        elif msg == 'hangup1':
+            HangupStrategy('testStrategy')
+        elif msg == 'hangup2':
+            HangupStrategy('testStrategy2')
+        elif msg == 'resume1':
+            ResumeStrategy('testStrategy')
+        elif msg == 'resume2':
+            ResumeStrategy('testStrategy2')
         else:
             if msg in MarketData:
                 print MarketData[msg].LastPrice
