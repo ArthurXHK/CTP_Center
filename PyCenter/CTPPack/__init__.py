@@ -13,40 +13,59 @@ Orders = Trader.Orders
 
 RegisterStrategy = StrategyCenter.RegisterStrategy
 HangupStrategy = StrategyCenter.HangupStrategy
-StopStrategy = StrategyCenter.HangupStrategy
 
 listOfThread = StrategyCenter.listOfThread
 listOfEvent = StrategyCenter.listOfEvent
 listOfEventLock = StrategyCenter.listOfEventLock
 
 
+strategyPack = StrategyCenter
 
-def Connect():
-    global trader, market
-    trader = Trader.Trader()
-    market = MarketDataCenter.MarketDataCenter()
-    market.Connect()
-    trader.Connect()
+trader = ''
+market = ''
 
-def Release():
-    trader.Release()
-    market.Release()
 
-#行情线程
+
+
 def MarketThread():
+    '''行情线程'''
     market.run()
     MainOverEvent.wait()
     MainOverEvent.clear()
     Release()
 marketthread = threading.Thread(None, target=MarketThread)
 
-#启动策略
+def Connect():
+    '''连接端口'''
+    global trader, market
+    trader = Trader.Trader()
+    market = MarketDataCenter.MarketDataCenter()
+    res = True
+    if market.Connect() == False or trader.Connect() == False:
+        res = False
+    if res == False:
+        Release()
+    return res
+def Release():
+    '''释放端口'''
+    trader.Release()
+    market.Release()
+
+
+
+
+def SetStrategyPack(strategypack):
+    '''设置使用策略包'''
+    global strategyPack
+    strategyPack = strategypack
+    
+
 def StartStrategy(instrument, strategyname):
-    #判断策略是否已加入
+    '''启动策略'''
     if strategyname in listOfEvent:
         print strategyname, 'is exist'
     else:
-        strategyfun = getattr(StrategyCenter, strategyname)#get strategy function, maybe modify later
+        strategyfun = getattr(strategyPack, strategyname)#get strategy function, maybe modify later
         strategyevent = threading.Event()
         RegisterStrategy(instrument, strategyevent)
         with listOfEventLock:
@@ -55,24 +74,25 @@ def StartStrategy(instrument, strategyname):
         #listOfThread[strategyname] = strategythread
         strategythread.start()
     
-#恢复运行策略
-def ResumeStrategy(strategyname):
+def ResumeStrategyEvent(strategyname):
+    '''恢复运行策略'''
     if strategyname not in listOfEvent:
         print strategyname, 'not exist'
     instrument, strategyevent = listOfEvent[strategyname]
     RegisterStrategy(instrument, strategyevent)
-        
-#启动行情
+
+
 def StartMarket():
-    
+    '''启动行情'''
     if not marketthread.is_alive():
-        Connect()
-        
-        marketthread.start()
+        if Connect():
+            marketthread.start()
+        else:
+            print 'connection error'
     else: print 'Market is alive'
     
-#停止行情
 def StopMarket():
+    '''停止行情'''
     MainOverEvent.set()
 
 
@@ -84,7 +104,8 @@ def CancelOrder(orderref):
     
     
 def main():
-    
+    print Connect()
+    '''
     StartMarket()
     while True:
         msg = raw_input('input: ')
@@ -110,7 +131,7 @@ def main():
                 print MarketData[msg].LastPrice
             else:
                 print 'no inst'
-    
+    '''
 
 
 

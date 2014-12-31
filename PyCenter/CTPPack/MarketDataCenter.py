@@ -5,7 +5,6 @@ from CTPUserApiStruct import *
 from ctypes import *
 from CallBackDecorater import *
 import ConfigParser
-from eventlet import sleep
 import logging
 import copy
 import threading
