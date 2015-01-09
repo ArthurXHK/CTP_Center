@@ -63,3 +63,4 @@ include/boost/*
 *.vcxproj.user
 *.settings
 *.pyc
+*.rar

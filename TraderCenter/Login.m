@@ -1,7 +1,7 @@
 function ind = Login(varargin)
 
 inifile = '..\server.ini';
-server = 'SimServer';
+server = 'SimServer2';
 if nargin >= 1
     server = varargin{1};
 end
